@@ -255,3 +255,13 @@ td.num { font-weight: 800; font-variant-numeric: tabular-nums; }
   .open-menu { display: grid; }
   .ask-footer .btn { width: 100%; }
 }
+
+/* Pie chart */
+.pie-chart { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+.pie-chart svg { flex-shrink: 0; }
+.pie-legend { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.pie-legend li { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+.pie-swatch { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
+.pie-label { color: var(--ink); }
+.pie-legend strong { font-variant-numeric: tabular-nums; }
+.pie-pct { color: var(--muted); font-size: 13px; }
