@@ -6,7 +6,7 @@
 //   - Served locally on another port (e.g. http://localhost:5173): "http://localhost:8000"
 // To force a value, set API_BASE_URL_OVERRIDE below.
 
-const API_BASE_URL_OVERRIDE = "";
+const API_BASE_URL_OVERRIDE = "/api";
 
 const servedByNginx = window.location.port === "" || window.location.port === "80" || window.location.port === "443";
 const API_BASE_URL = (API_BASE_URL_OVERRIDE || (servedByNginx ? "/api" : "http://localhost:8000")).replace(/\/$/, "");

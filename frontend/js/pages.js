@@ -7,17 +7,22 @@ import {
   uploadExcel, askExcel, executeExcelQuery,
   normalizeResult, extractSql, extractAnswer, extractFileId, hasRows,
 } from "./api.js";
+import { speakText, stopSpeaking, isSpeaking, makeResultSpeech } from "./speak.js"; // NEW: for voice output
 
 // ---------------------------------------------------------------------------
 // SQL database
 // ---------------------------------------------------------------------------
 export function initDatabasePage(container) {
   const panels = createQueryPanels({
+    hideRunButton: true, // NEW: no Run Query button, the answer comes directly
     onRun: async (sql) => {
       panels.setRunning(true);
       ask.setError("");
       try {
-        panels.setResult(normalizeResult(await executeQuery(sql)) ?? { columns: [], rows: [] });
+        // NEW: saved the result in a variable so we can also speak it
+        const result = normalizeResult(await executeQuery(sql)) ?? { columns: [], rows: [] };
+        panels.setResult(result);
+        ask.setSpeech(makeResultSpeech(result)); // NEW
       } catch (e) {
         panels.setResult(null);
         ask.setError(e.message);
@@ -31,7 +36,7 @@ export function initDatabasePage(container) {
     subtitle: "Describe what you want to know about your database in plain English, or use the mic.",
     placeholder: "e.g. Give the number of employees in the company",
     examples: ["Give the number of employees in the company", "Find the second highest salary with employee details"],
-    buttonLabel: "Generate SQL",
+    buttonLabel: "Generate Answer", // NEW: was "Generate SQL"
     loadingLabel: "Generating…",
     onSubmit: async (question) => {
       const text = question.trim();
@@ -40,10 +45,16 @@ export function initDatabasePage(container) {
       ask.setLoading(true);
       ask.setError("");
       panels.setResult(null);
+      ask.setSpeech(""); // NEW: clear old answer
       try {
         const data = await convertToSql(text);
-        panels.setSql(extractSql(data));
-        if (hasRows(data) && !Array.isArray(data)) panels.setResult(normalizeResult(data));
+        const sql = extractSql(data); // NEW: keep the SQL in a variable
+        panels.setSql(sql);
+
+        // NEW: run the SQL straight away (no need to press Run Query)
+        const result = normalizeResult(await executeQuery(sql)) ?? { columns: [], rows: [] };
+        panels.setResult(result);
+        ask.setSpeech(makeResultSpeech(result));
       } catch (e) {
         ask.setError(e.message);
       } finally {
@@ -93,7 +104,21 @@ export function initPdfPage(container) {
           setTimeout(() => (copyBtn.innerHTML = icon("copy")), 1500);
         }
       });
-      head.append(el("p", "answer-q", item.question), copyBtn);
+      // NEW: speaker button for each answer
+      const listenBtn = el("button", "icon-btn plain", "🔊");
+      listenBtn.setAttribute("aria-label", "Listen to answer");
+      listenBtn.addEventListener("click", () => {
+        if (isSpeaking()) {
+          stopSpeaking();
+        } else {
+          speakText(item.answer);
+        }
+      });
+      const buttons = el("div");          // NEW: box to keep both buttons together
+      buttons.style.display = "flex";     // NEW
+      buttons.append(listenBtn, copyBtn); // NEW
+
+      head.append(el("p", "answer-q", item.question), buttons); // NEW: buttons instead of copyBtn
       article.append(head, el("p", "answer-a", item.answer));
 
       if (Array.isArray(item.sources) && item.sources.length) {
@@ -108,7 +133,7 @@ export function initPdfPage(container) {
   const ask = createAskCard({
     subtitle: "Upload a PDF first to start asking questions.",
     placeholder: "e.g. Summarize the key points of this document",
-    buttonLabel: "Ask PDF",
+    buttonLabel: "Generate Answer", // NEW: was "Ask PDF"
     loadingLabel: "Reading…",
     onSubmit: async (question) => {
       const text = question.trim();
@@ -116,9 +141,11 @@ export function initPdfPage(container) {
       if (!text) return ask.setError("Type or speak a question first.");
       ask.setLoading(true);
       ask.setError("");
+      ask.setSpeech(""); // NEW: clear old answer
       try {
         const data = await askPdf(text, uploadState.fileId);
         history.unshift({ question: text, answer: extractAnswer(data) || "No answer returned.", sources: data?.sources });
+        ask.setSpeech(history[0].answer); // NEW: newest answer is at position 0
         ask.setValue("");
         renderAnswers();
       } catch (e) {
@@ -163,11 +190,15 @@ export function initExcelPage(container) {
 
   const panels = createQueryPanels({
     queryTitle: "Generated Query",
+    hideRunButton: true, // NEW: no Run Query button, the answer comes directly
     onRun: async (sql) => {
       panels.setRunning(true);
       ask.setError("");
       try {
-        panels.setResult(normalizeResult(await executeExcelQuery(sql, uploadState.fileId)) ?? { columns: [], rows: [] });
+        // NEW: saved the result in a variable so we can also speak it
+        const result = normalizeResult(await executeExcelQuery(sql, uploadState.fileId)) ?? { columns: [], rows: [] };
+        panels.setResult(result);
+        ask.setSpeech(makeResultSpeech(result)); // NEW
       } catch (e) {
         panels.setResult(null);
         ask.setError(e.message);
@@ -180,7 +211,7 @@ export function initExcelPage(container) {
   const ask = createAskCard({
     subtitle: "Upload an Excel file first to start asking questions.",
     placeholder: "e.g. What is the total sales for each region?",
-    buttonLabel: "Generate Query",
+    buttonLabel: "Generate Answer", // NEW: was "Generate Query"
     loadingLabel: "Generating…",
     onSubmit: async (question) => {
       const text = question.trim();
@@ -191,11 +222,31 @@ export function initExcelPage(container) {
       ask.setError("");
       panels.setResult(null);
       panels.setAnswer("");
+      ask.setSpeech(""); // NEW: clear old answer
       try {
         const data = await askExcel(text, uploadState.fileId);
-        panels.setSql(extractSql(data));
-        if (hasRows(data)) panels.setResult(normalizeResult(data));
+        const sql = extractSql(data); // NEW: keep the query in a variable
+        panels.setSql(sql);
+
+        // NEW: get the result table
+        let result = null;
+        if (hasRows(data)) {
+          // the backend already sent the rows
+          result = normalizeResult(data);
+        } else if (sql) {
+          // the backend sent only the query, so we run it straight away
+          result = normalizeResult(await executeExcelQuery(sql, uploadState.fileId)) ?? { columns: [], rows: [] };
+        }
+        if (result) panels.setResult(result);
+
         if (data && typeof data === "object" && data.answer) panels.setAnswer(extractAnswer(data));
+
+        // NEW: speak the answer, or the rows
+        if (data && data.answer) {
+          ask.setSpeech(extractAnswer(data));
+        } else if (result) {
+          ask.setSpeech(makeResultSpeech(result));
+        }
       } catch (e) {
         ask.setError(e.message);
       } finally {

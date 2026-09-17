@@ -1,6 +1,7 @@
 import { icon } from "./icons.js";
 import { el, html, spinner, copyText } from "./utils.js";
 import { createVoiceInput } from "./voice.js";
+import { speakText, stopSpeaking } from "./speak.js"; // NEW: for voice output
 import { renderChart } from "./chart.js";
 
 let uid = 0;
@@ -15,8 +16,9 @@ export function createAskCard({ subtitle, placeholder, examples = [], buttonLabe
       <label for="${id}" class="card-title">Ask a question</label>
       <p class="card-sub"></p>
       <div class="input-wrap">
-        <textarea id="${id}" rows="4"></textarea>
-        <button type="button" class="mic-btn" aria-label="Ask with your voice" title="Ask with your voice">${icon("mic", 18)}</button>
+        <textarea id="${id}" rows="4" style="padding-right: 116px;"></textarea> <!-- NEW: space for 2 buttons -->
+        <button type="button" class="mic-btn" style="right: 62px;" aria-label="Ask with your voice" title="Ask with your voice">${icon("mic", 18)}</button>
+        <button type="button" class="mic-btn wave-btn" style="right: 12px; background: #2563eb; border-color: #2563eb; color: #fff;" aria-label="Talk and hear the answer" title="Talk and hear the answer">${icon("wave", 18)}</button> <!-- NEW: voice to voice button -->
       </div>
       <p class="listening-note" hidden><span class="pulse"></span> Listening. Press stop when you're done.</p>
       <div class="ask-footer">
@@ -31,6 +33,7 @@ export function createAskCard({ subtitle, placeholder, examples = [], buttonLabe
   const sub = card.querySelector(".card-sub");
   const wrap = card.querySelector(".input-wrap");
   const micBtn = card.querySelector(".mic-btn");
+  const waveBtn = card.querySelector(".wave-btn"); // NEW: voice to voice button
   const note = card.querySelector(".listening-note");
   const tryBox = card.querySelector(".try");
   const submitBtn = card.querySelector(".submit-btn");
@@ -39,11 +42,13 @@ export function createAskCard({ subtitle, placeholder, examples = [], buttonLabe
   let listening = false;
   let loading = false;
   let disabled = false;
+  let usedVoice = false;  // NEW: true when the question was asked with the mic
+  let waveListening = false; // NEW: true while the wave button is listening
 
   textarea.placeholder = placeholder;
 
   const voice = createVoiceInput({
-    onText: (text) => { textarea.value = text; },
+    onText: (text) => { textarea.value = text; }, // NEW: mic is only voice to text now, so no auto speak
     onListeningChange: (on) => {
       listening = on;
       wrap.classList.toggle("listening", on);
@@ -57,6 +62,45 @@ export function createAskCard({ subtitle, placeholder, examples = [], buttonLabe
   });
 
   micBtn.addEventListener("click", () => (listening ? voice.stop() : voice.start(textarea.value)));
+
+  // NEW: second voice input for the wave button (voice to voice)
+  const waveVoice = createVoiceInput({
+    onText: (text) => { textarea.value = text; },
+    onListeningChange: (on) => {
+      const wasListening = waveListening; // remember old state
+      waveListening = on;
+      wrap.classList.toggle("listening", on);
+      waveBtn.classList.toggle("on", on);
+      waveBtn.innerHTML = icon(on ? "stop" : "wave", 18);
+      waveBtn.style.background = on ? "#dc2626" : "#2563eb";  // red while listening, blue otherwise
+      waveBtn.style.borderColor = on ? "#dc2626" : "#2563eb";
+      note.hidden = !on;
+
+      // When listening stops, ask the question automatically and speak the answer
+      if (wasListening && !on && textarea.value.trim()) {
+        usedVoice = true;
+        onSubmit(textarea.value);
+      }
+    },
+    onError: (msg) => setError(msg),
+  });
+
+  // NEW: wave button click - start listening, or stop if already listening
+  waveBtn.addEventListener("click", () => {
+    if (waveListening) {
+      waveVoice.stop();
+    } else {
+      stopSpeaking();      // stop old answer if it is still speaking
+      textarea.value = ""; // start with an empty box
+      waveVoice.start("");
+    }
+  });
+
+  // NEW: if the user types, the question is not a voice question anymore
+  textarea.addEventListener("input", () => {
+    usedVoice = false;
+  });
+
   submitBtn.addEventListener("click", () => onSubmit(textarea.value));
   textarea.addEventListener("keydown", (e) => {
     if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) onSubmit(textarea.value);
@@ -64,7 +108,7 @@ export function createAskCard({ subtitle, placeholder, examples = [], buttonLabe
 
   function renderButton() {
     submitBtn.disabled = loading || disabled;
-    submitBtn.innerHTML = `${loading ? spinner : icon("sparkle")} <span></span>`;
+    submitBtn.innerHTML = `${icon("sparkle")} <span></span>`; // NEW: no spinning icon, always show sparkle
     submitBtn.querySelector("span").textContent = loading ? loadingLabel : buttonLabel;
   }
 
@@ -74,10 +118,19 @@ export function createAskCard({ subtitle, placeholder, examples = [], buttonLabe
     tryBox.append("Try: ");
     list.forEach((ex, i) => {
       const link = el("button", "link", ex);
-      link.addEventListener("click", () => { textarea.value = ex; onSubmit(ex); });
+      link.addEventListener("click", () => { textarea.value = ex; usedVoice = false; onSubmit(ex); }); // NEW: usedVoice = false
       tryBox.append(link);
       if (i < list.length - 1) tryBox.append(", ");
     });
+  }
+
+  // NEW: if the question was asked with the wave button, read the answer automatically (voice to voice).
+  function setSpeech(text) {
+    if (!text) {
+      stopSpeaking();
+    } else if (usedVoice) {
+      speakText(text);
+    }
   }
 
   function setError(msg) {
@@ -102,13 +155,14 @@ export function createAskCard({ subtitle, placeholder, examples = [], buttonLabe
     setSubtitle: (text) => { sub.textContent = text; },
     setExamples,
     setError,
+    setSpeech, // NEW
   };
 }
 
 // ---------------------------------------------------------------------------
 // Generated query panel + results panel (table / chart)
 // ---------------------------------------------------------------------------
-export function createQueryPanels({ queryTitle = "Generated SQL", onRun }) {
+export function createQueryPanels({ queryTitle = "Generated SQL", onRun, hideRunButton = false }) { // NEW: hideRunButton
   const grid = html(`
     <div class="grid">
       <section class="card">
@@ -144,6 +198,7 @@ export function createQueryPanels({ queryTitle = "Generated SQL", onRun }) {
   const code = grid.querySelector(".code");
   const copyBtn = grid.querySelector(".copy-btn");
   const runBtn = grid.querySelector(".run-btn");
+  if (hideRunButton) runBtn.hidden = true; // NEW: hide Run Query button when the page runs the query itself
   const countText = grid.querySelector(".result-count");
   const answerBox = grid.querySelector(".answer-inline");
   const body = grid.querySelector(".result-body");
@@ -180,7 +235,9 @@ export function createQueryPanels({ queryTitle = "Generated SQL", onRun }) {
 
     body.innerHTML = "";
     if (!result) {
-      if (!answer) body.append(el("div", "empty", "No results yet. Generate a query and press Run Query."));
+      // NEW: show a different message when there is no Run Query button
+      const emptyText = hideRunButton ? "No results yet. Ask a question and press Generate Answer." : "No results yet. Generate a query and press Run Query.";
+      if (!answer) body.append(el("div", "empty", emptyText));
       return;
     }
     if (rowCount === 0) {
