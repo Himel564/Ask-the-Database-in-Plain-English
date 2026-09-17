@@ -12,3 +12,6 @@ langchain-community
 faiss-cpu
 pdfplumber
 python-multipart
+pandas
+openpyxl
+xlrd

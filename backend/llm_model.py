@@ -166,3 +166,103 @@ def generate_response(question):
         return {"error":str(e)}
     else:
         return result
+
+def generate_pandas_query(question,column_names):
+
+    model = init_chat_model(
+        "groq:openai/gpt-oss-120b"
+    )
+
+    template = PromptTemplate(
+        input_variables=["question", "column_names"],
+    template = """
+    You are an expert Pandas DataFrame query generator.
+
+    Your task is to convert a user's natural language question into ONE valid Pandas expression that can be executed on a DataFrame named `df`.
+
+    Available columns:
+    {column_names}
+
+    DataFrame name:
+    df
+
+    Rules:
+
+    1. Use ONLY the columns provided above.
+    2. Never invent column names.
+    3. Assume the data is already loaded into a Pandas DataFrame called `df`.
+    4. Generate only executable Pandas code.
+    5. Return only the Pandas expression.
+    6. Do not return markdown.
+    7. Do not return explanations.
+    8. Use proper filtering, sorting, grouping, aggregation, and indexing when needed.
+    9. For count questions use:
+    len(df[condition])
+    or
+    df.shape[0]
+    10. For sum questions use:
+        df["column"].sum()
+    11. For average questions use:
+        df["column"].mean()
+    12. For maximum questions use:
+        df["column"].max()
+    13. For minimum questions use:
+        df["column"].min()
+    14. For unique values use:
+        df["column"].unique()
+    15. For top N results use:
+        df.sort_values(...).head(N)
+    16. For grouped results use:
+        df.groupby(...).agg(...)
+    17. If multiple conditions are required, use proper Pandas boolean operators:
+        &
+        |
+    18. Always return a single executable Pandas statement.
+
+    Examples:
+
+    Question:
+    Show all employees from Sales department
+
+    Output:
+    df[df["Department"] == "Sales"]
+
+    Question:
+    What is the highest salary?
+
+    Output:
+    df["Salary"].max()
+
+    Question:
+    Show top 5 employees by salary
+
+    Output:
+    df.sort_values("Salary", ascending=False).head(5)
+
+    Question:
+    How many employees are in HR?
+
+    Output:
+    len(df[df["Department"] == "HR"])
+
+    Question:
+    Average salary by department
+
+    Output:
+    df.groupby("Department")["Salary"].mean()
+
+    User Question:
+    {question}
+    """
+    )
+
+    chain = template | model | StrOutputParser()
+    try:
+        result = chain.invoke({
+            "question": question,
+            "column_names": column_names
+        })
+    except Exception as e:
+        return {"error":str(e)}
+    else:
+        return result

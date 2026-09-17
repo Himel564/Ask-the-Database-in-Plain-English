@@ -99,3 +99,4 @@ export function normalizeResult(data) {
   const rows = payload.map((r) => (typeof r === "object" && r !== null ? r : { value: r }));
   return { columns: rows.length ? Object.keys(rows[0]) : [], rows };
 }
+
