@@ -1,7 +1,6 @@
 from database.db_schemas import database_schema
 import os
 from dotenv import load_dotenv
-
 from langchain_core.prompts import PromptTemplate
 from langchain.chat_models import init_chat_model
 from langchain_core.output_parsers import StrOutputParser
@@ -49,6 +48,6 @@ def generate_response(question):
             "schema": database_schema
         })
     except Exception as e:
-        return {"error":e}
+        return {"error":str(e)}
     else:
         return result

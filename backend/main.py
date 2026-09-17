@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from database.db_job import execute_query
-from backend.llm_model import generate_response  # your function: takes question (str), returns SQL (str)
+from backend.llm_model import generate_response  
 
 app = FastAPI(title="QueryAI Backend")
 
@@ -35,6 +35,7 @@ def convert_to_sql(request: QuestionRequest):
     try:
         sql = generate_response(request.question)
     except Exception as e:
+        print(e)
         raise HTTPException(status_code=500, detail=f"Could not generate SQL: {e}")
     return {"sql": sql}
 

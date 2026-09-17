@@ -1,8 +1,0 @@
-langchain
-langchain-groq
-langchain-community
-langchain-core
-dotenv
-psycopg2
-fastapi
-uvicorn
