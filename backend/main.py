@@ -9,6 +9,7 @@ import pandas as pd
 import io
 from database.db_job import execute_query
 from backend.llm_model import generate_response, load_and_index_pdf, query_pdf_context,generate_pandas_query
+from backend.evaluation import evaluate_queries
 
 app = FastAPI(title="QueryAI Backend")
 
@@ -31,6 +32,12 @@ class QueryRequest(BaseModel):
 class PdfQuestionRequest(BaseModel):
     question: str
     file_id: str | None = None
+
+
+class EvaluateRequest(BaseModel):
+    question: str
+    generated_sql: str
+    actual_sql: str
 
 
 @app.get("/health")
@@ -247,3 +254,16 @@ async def execute_excel_query(request: ExcelQueryRequest):
         raise HTTPException(status_code=400, detail=f"Invalid Pandas query: {e}")
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Could not execute Pandas query: {e}")
+
+
+@app.post("/evaluate_sql")
+def evaluate_sql(request: EvaluateRequest):
+    if not request.generated_sql.strip():
+        raise HTTPException(status_code=400, detail="Generate a SQL query first.")
+    if not request.actual_sql.strip():
+        raise HTTPException(status_code=400, detail="Enter the correct SQL query to compare against.")
+    try:
+        result = evaluate_queries(request.question, request.generated_sql, request.actual_sql)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Could not evaluate the queries: {e}")
+    return result

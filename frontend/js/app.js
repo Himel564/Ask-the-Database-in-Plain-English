@@ -1,11 +1,12 @@
 import { renderIcons } from "./icons.js";
 import { checkBackend } from "./api.js";
-import { initDatabasePage, initPdfPage, initExcelPage } from "./pages.js";
+import { initDatabasePage, initPdfPage, initExcelPage, initEvaluationPage } from "./pages.js";
 
 const MODES = {
   sql: { title: "Ask your database", hint: "Query your database" },
   pdf: { title: "Ask your PDF", hint: "Chat with a document" },
   excel: { title: "Ask your spreadsheet", hint: "Query a spreadsheet" },
+  evaluation: { title: "Evaluate SQL generation", hint: "Check the model's SQL accuracy against your own query" },
 };
 
 // Static icons in index.html
@@ -15,6 +16,7 @@ renderIcons();
 initDatabasePage(document.getElementById("page-sql"));
 initPdfPage(document.getElementById("page-pdf"));
 initExcelPage(document.getElementById("page-excel"));
+initEvaluationPage(document.getElementById("page-evaluation"));
 
 // ---- Sidebar navigation ----
 const sidebar = document.getElementById("sidebar");

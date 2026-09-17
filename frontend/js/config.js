@@ -15,6 +15,7 @@ const ENDPOINTS = {
   health: "/health",
   convertSql: "/convert_to_sql",
   executeQuery: "/execute_query",
+  evaluateSql: "/evaluate_sql",
 
   pdfUpload: "/upload_pdf",
   pdfAsk: "/ask_pdf",

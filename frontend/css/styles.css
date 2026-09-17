@@ -256,6 +256,22 @@ td.num { font-weight: 800; font-variant-numeric: tabular-nums; }
   .ask-footer .btn { width: 100%; }
 }
 
+/* Evaluation card */
+.eval-card .eval-sql { min-height: 130px; }
+.eval-score { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.eval-score-label { font-weight: 800; font-size: 15px; }
+.eval-badge {
+  display: inline-flex; align-items: center;
+  padding: 4px 12px; border-radius: 999px;
+  font-size: 13px; font-weight: 800;
+}
+.eval-badge.match { background: #dcf3e4; color: var(--green-hover); }
+.eval-badge.partial { background: #fdf3d8; color: #92650b; }
+.eval-badge.mismatch { background: var(--danger-bg); color: var(--danger); }
+.eval-sub { margin: 10px 0 0; font-size: 13.5px; color: var(--muted); }
+.eval-sub.eval-err { color: var(--danger); }
+.eval-result { border-top: 1px solid var(--line); padding-top: 14px; margin-top: 4px; }
+
 /* Pie chart */
 .pie-chart { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
 .pie-chart svg { flex-shrink: 0; }

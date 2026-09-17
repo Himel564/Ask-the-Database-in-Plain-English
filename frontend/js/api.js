@@ -35,6 +35,8 @@ const postFile = (url, file) => {
 // Database
 export const convertToSql = (question) => postJson(API.convertSql, { question });
 export const executeQuery = (query) => postJson(API.executeQuery, { query });
+export const evaluateSql = (question, generatedSql, actualSql) =>
+  postJson(API.evaluateSql, { question, generated_sql: generatedSql, actual_sql: actualSql });
 
 // PDF
 export const uploadPdf = (file) => postFile(API.pdfUpload, file);
@@ -99,4 +101,3 @@ export function normalizeResult(data) {
   const rows = payload.map((r) => (typeof r === "object" && r !== null ? r : { value: r }));
   return { columns: rows.length ? Object.keys(rows[0]) : [], rows };
 }
-
