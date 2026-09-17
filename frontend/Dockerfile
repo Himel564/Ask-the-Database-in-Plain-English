@@ -1,15 +1,9 @@
-# Stage 1: build the React app
-FROM node:20-alpine AS build
-WORKDIR /app
-COPY package*.json ./
-RUN npm install
-COPY . .
-ARG VITE_API_BASE_URL=/api
-ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
-RUN npm run build
-
-# Stage 2: serve it with Nginx
+# Plain HTML/CSS/JS frontend: no build step, Nginx serves the files directly
 FROM nginx:alpine
+
 COPY nginx.conf /etc/nginx/conf.d/default.conf
-COPY --from=build /app/dist /usr/share/nginx/html
+COPY index.html /usr/share/nginx/html/
+COPY css /usr/share/nginx/html/css
+COPY js /usr/share/nginx/html/js
+
 EXPOSE 80

@@ -1,22 +1,35 @@
-# LinguaSQL frontend
+# LinguaSQL frontend (HTML, CSS, JavaScript)
 
-## Run
-    npm install
-    npm run dev
-Open http://localhost:5173
+No Node.js, npm or build step.
 
-## Backend URLs
-All endpoints are in `.env`. Restart `npm run dev` after changing it.
-The backend must allow CORS from http://localhost:5173.
+## Structure
+    frontend/
+    ├── index.html        page layout and sidebar
+    ├── css/styles.css    all styles
+    ├── js/
+    │   ├── app.js        starts the app, sidebar, backend status
+    │   ├── pages.js      SQL, PDF and Excel pages
+    │   ├── components.js ask card, query/results panels, file upload
+    │   ├── api.js        backend requests
+    │   ├── config.js     backend URL and endpoint paths
+    │   ├── voice.js      voice input
+    │   ├── chart.js      bar chart
+    │   ├── icons.js      SVG icons
+    │   └── utils.js      small helpers
+    ├── nginx.conf
+    └── Dockerfile
 
-| Mode  | Endpoint (.env key)            | Request                              | Expected response |
-|-------|--------------------------------|--------------------------------------|-------------------|
-| SQL   | VITE_CONVERT_SQL_ENDPOINT      | JSON {question}                      | {sql} |
-| SQL   | VITE_EXECUTE_QUERY_ENDPOINT    | JSON {query}                         | list of rows |
-| PDF   | VITE_PDF_UPLOAD_ENDPOINT       | multipart form, field "file"         | {file_id} |
-| PDF   | VITE_PDF_ASK_ENDPOINT          | JSON {question, file_id}             | {answer} |
-| Excel | VITE_EXCEL_UPLOAD_ENDPOINT     | multipart form, field "file"         | {file_id} |
-| Excel | VITE_EXCEL_ASK_ENDPOINT        | JSON {question, file_id}             | {sql} and/or {result} / {answer} |
-| Excel | VITE_EXCEL_EXECUTE_ENDPOINT    | JSON {query, file_id}                | list of rows |
+## Run locally
+The page uses JavaScript modules, so it must be served over http (double-clicking index.html won't work).
 
-Voice input uses the browser's speech recognition and works in Chrome and Edge.
+    cd frontend
+    python -m http.server 5173
+
+Open http://localhost:5173 and start the backend with `uvicorn backend.main:app --reload`.
+Port 5173 matches the backend's CORS setting.
+
+## Run with Docker
+From the project root: `docker compose up -d --build`, then open http://localhost.
+
+## Backend URL
+Set automatically in js/config.js: `/api` when served by Nginx, `http://localhost:8000` otherwise.

@@ -9,7 +9,7 @@ services:
     volumes:
       - db_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
       interval: 5s
       retries: 10
 
@@ -18,8 +18,10 @@ services:
       context: .
       dockerfile: backend/Dockerfile
     env_file:
-      - .env
-      - database/.env
+      - path: .env
+        required: true
+      - path: database/.env
+        required: false
     environment:
       DB_HOST: db
       DB_PORT: 5432
@@ -37,8 +39,10 @@ services:
       dockerfile: backend/Dockerfile
     restart: unless-stopped
     env_file:
-      - .env
-      - backend/.env
+      - path: .env
+        required: true
+      - path: backend/.env
+        required: false
     environment:
       DB_HOST: db
       DB_PORT: 5432
@@ -47,16 +51,12 @@ services:
         condition: service_completed_successfully
 
   frontend:
-    build:
-      context: ./frontend
-      args:
-        VITE_API_BASE_URL: /api
+    build: ./frontend
     restart: unless-stopped
     ports:
-      - "80:80"
+      - "8080:80"
     depends_on:
       - backend
 
 volumes:
   db_data:
-

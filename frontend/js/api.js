@@ -7,21 +7,20 @@ async function handle(res) {
     const detail = data?.detail || data?.error || `Request failed with status ${res.status}`;
     throw new Error(typeof detail === "string" ? detail : JSON.stringify(detail));
   }
-  if (data && typeof data === "object" && !Array.isArray(data) && data.error) {
+  if (data && typeof data === "object" && !Array.isArray(data) && typeof data.error === "string") {
     throw new Error(data.error);
   }
   return data;
 }
 
 async function request(url, options) {
+  let res;
   try {
-    return await handle(await fetch(url, options));
-  } catch (e) {
-    if (e instanceof TypeError) {
-      throw new Error("Can't reach the backend. Check that FastAPI is running and VITE_API_BASE_URL in .env is correct.");
-    }
-    throw e;
+    res = await fetch(url, options);
+  } catch {
+    throw new Error("Can't reach the backend. Check that FastAPI is running and the API URL in js/config.js is correct.");
   }
+  return handle(res);
 }
 
 const postJson = (url, body) =>
@@ -53,7 +52,12 @@ export async function checkBackend() {
 // ---- Response helpers ----
 export function extractSql(data) {
   if (typeof data === "string") return data;
-  return data?.sql ?? data?.query ?? data?.sql_query ?? "";
+  const sql = data?.sql ?? data?.query ?? data?.sql_query ?? "";
+  // The backend can put an error object inside "sql" when the LLM call fails
+  if (sql && typeof sql === "object") {
+    throw new Error(sql.error || JSON.stringify(sql));
+  }
+  return sql;
 }
 
 export function extractAnswer(data) {
@@ -72,8 +76,11 @@ export function hasRows(data) {
 // Turns different backend result shapes into { columns, rows }.
 export function normalizeResult(data) {
   if (data == null) return null;
-  let payload = Array.isArray(data) ? data : data.result ?? data.results ?? data.rows ?? data.data ?? null;
-  if (payload == null) return null;
+  const payload = Array.isArray(data) ? data : data.result ?? data.results ?? data.rows ?? data.data ?? null;
+  if (payload == null) {
+    if (typeof data === "object" && "affected_rows" in data) return { columns: ["affected_rows"], rows: [data] };
+    return null;
+  }
 
   if (!Array.isArray(payload) && typeof payload === "object") {
     if (Array.isArray(payload.rows) && Array.isArray(payload.columns)) {

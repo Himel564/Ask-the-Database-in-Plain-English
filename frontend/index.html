@@ -7,9 +7,68 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="css/styles.css" />
   </head>
   <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
+    <div class="app">
+      <aside class="sidebar" id="sidebar">
+        <div class="brand">
+          <div class="brand-mark" data-icon="database" data-size="22"></div>
+          <div>
+            <h1>LinguaSQL</h1>
+            <p>Natural Language → SQL</p>
+          </div>
+          <button class="icon-btn plain close-menu" id="closeMenu" aria-label="Close menu" data-icon="close"></button>
+        </div>
+
+        <nav class="nav" id="nav" aria-label="Data sources">
+          <button class="nav-item active" data-mode="sql" aria-current="page">
+            <span data-icon="database"></span>
+            <span><strong>SQL Database</strong><small>Query your database</small></span>
+          </button>
+          <button class="nav-item" data-mode="pdf">
+            <span data-icon="pdf"></span>
+            <span><strong>PDF Upload</strong><small>Chat with a document</small></span>
+          </button>
+          <button class="nav-item" data-mode="excel">
+            <span data-icon="excel"></span>
+            <span><strong>Excel Upload</strong><small>Query a spreadsheet</small></span>
+          </button>
+        </nav>
+
+        <div class="status" id="status">
+          <span class="dot"></span>
+          <span id="statusText">Checking connection</span>
+        </div>
+      </aside>
+      <div class="scrim" id="scrim" hidden></div>
+
+      <div class="main">
+        <header class="topbar">
+          <button class="icon-btn plain open-menu" id="openMenu" aria-label="Open menu" data-icon="menu"></button>
+          <div>
+            <h2 id="pageTitle">Ask your database</h2>
+            <p id="pageHint">Query your database</p>
+          </div>
+        </header>
+
+        <main class="container">
+          <!-- All pages stay in the page so switching tabs keeps your work -->
+          <div class="page-stack" id="page-sql"></div>
+          <div class="page-stack" id="page-pdf" hidden></div>
+          <div class="page-stack" id="page-excel" hidden></div>
+
+          <div class="features">
+            <div class="feature"><span data-icon="sparkle"></span><div><h3>Natural language</h3><p>Ask questions without knowing SQL.</p></div></div>
+            <div class="feature"><span data-icon="mic"></span><div><h3>Voice input</h3><p>Speak your question instead of typing.</p></div></div>
+            <div class="feature"><span data-icon="clock"></span><div><h3>Fast results</h3><p>Run queries and inspect results instantly.</p></div></div>
+          </div>
+        </main>
+
+        <footer class="footer">LinguaSQL frontend, built with HTML, CSS and JavaScript</footer>
+      </div>
+    </div>
+
+    <script type="module" src="js/app.js"></script>
   </body>
 </html>
