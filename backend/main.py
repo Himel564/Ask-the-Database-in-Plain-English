@@ -23,6 +23,25 @@ app.add_middleware(
 )
 
 
+# FIX: friendly message when the question is not valid / has no meaning
+INVALID_SQL_MESSAGE = (
+    "Sorry, I couldn't understand that as a question about your database. "
+    "Please try again with a clear question, for example: "
+    "\"Give the number of employees in the company\" or "
+    "\"Find the second highest salary with employee details\"."
+)
+
+INVALID_EXCEL_MESSAGE = (
+    "Sorry, I couldn't understand that as a question about your spreadsheet. "
+    "Please try again with a clear question about its columns, for example: "
+    "\"Show the first 10 rows\" or \"Find the row with the highest value\"."
+)
+
+
+def _is_invalid(text):
+    return isinstance(text, str) and "INVALID_QUESTION" in text.upper()
+
+
 class QuestionRequest(BaseModel):
     question: str
 
@@ -56,6 +75,8 @@ def convert_to_sql(request: QuestionRequest):
     except Exception as e:
         print(e)
         raise HTTPException(status_code=500, detail=f"Could not generate SQL: {e}")
+    if _is_invalid(sql):  # FIX: meaningless / unrelated input
+        raise HTTPException(status_code=400, detail=INVALID_SQL_MESSAGE)
     return {"sql": sql}
 
 
@@ -184,6 +205,8 @@ async def process_query(request: PdfQuestionRequest):
         )
         if isinstance(pandas_query, dict) and "error" in pandas_query:
             raise HTTPException(status_code=500, detail=pandas_query["error"])
+        if _is_invalid(pandas_query):  # FIX: meaningless / unrelated input
+            raise HTTPException(status_code=400, detail=INVALID_EXCEL_MESSAGE)
 
         return {
             "question": question,
@@ -191,6 +214,9 @@ async def process_query(request: PdfQuestionRequest):
             "query": pandas_query,
             "pandas_query": pandas_query
         }
+
+    except HTTPException:  # FIX: keep our own messages instead of turning them into a 500 error
+        raise
 
     except Exception as e:
         raise HTTPException(

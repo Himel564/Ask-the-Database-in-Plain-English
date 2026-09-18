@@ -1,5 +1,6 @@
-import { detectLanguage } from "./language.js"; // NEW: multilingual speech
-import { getSpeechAudio } from "./api.js"; // NEW: clear Bengali / Hindi voice
+import { getAnswerInUserLanguage } from "./language.js"; // multilingual answers
+import { detectLanguage } from "./language.js"; //multilingual speech
+import { getSpeechAudio } from "./api.js"; // clear Bengali / Hindi voice
 
 let currentAudio = null; // NEW: the Bengali / Hindi audio that is playing now
 // NEW FILE: speak.js

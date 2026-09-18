@@ -150,6 +150,11 @@ def generate_response(question):
     7. Return ONLY the SQL query.
     8. Do not use markdown.
     9. Do not include explanations.
+    10. If the user input is NOT a clear question that can be answered from this schema
+        (for example greetings like "ok", "hi", "thanks", random words, meaningless text,
+        or questions about data that does not exist in the schema), return exactly:
+        INVALID_QUESTION
+        and nothing else.
 
     User question:
     {question}
@@ -218,6 +223,11 @@ def generate_pandas_query(question,column_names):
         &
         |
     18. Always return a single executable Pandas statement.
+    19. If the user input is NOT a clear question that can be answered from these columns
+        (for example greetings like "ok", "hi", "thanks", random words, meaningless text,
+        or questions about columns that do not exist), return exactly:
+        INVALID_QUESTION
+        and nothing else.
 
     Examples:
 

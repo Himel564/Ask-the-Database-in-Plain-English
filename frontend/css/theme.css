@@ -320,3 +320,14 @@ body.ls .brand-mark {
   border-radius: 12px;
 }
 body.ls .brand-mark svg { display: none; }
+
+/* ---------- Update 3: darker SQL code blocks (easier to read) ---------- */
+body.ls .ls-code { background: #1b2a22; color: #e6efe9; }
+body.ls .code-line .ln { color: #6f8579; }
+body.ls .tk-kw { color: #7cc4ff; font-weight: 700; }
+body.ls .tk-num { color: #ffb86b; }
+body.ls .tk-str { color: #a6e3a1; }
+body.ls .ls-code-empty { color: #9fb3a8; }
+/* Evaluation page: "Your SQL" box */
+body.ls .ls-page .code.eval-sql { background: #1b2a22; color: #e6efe9; }
+body.ls .ls-page .code.eval-sql::placeholder { color: #8fa59a; }

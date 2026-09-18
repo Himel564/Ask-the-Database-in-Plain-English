@@ -61,7 +61,7 @@ function watchValue(textarea, cb) {
 }
 
 // Very small SQL highlighter for the "View SQL" tab
-const KW = /\b(SELECT|DISTINCT|FROM|WHERE|AND|OR|NOT|IN|IS|NULL|AS|JOIN|LEFT|RIGHT|INNER|OUTER|FULL|CROSS|ON|GROUP|BY|ORDER|HAVING|LIMIT|OFFSET|DESC|ASC|UNION|ALL|INSERT|INTO|VALUES|UPDATE|SET|DELETE|CREATE|TABLE|WITH|CASE|WHEN|THEN|ELSE|END|COUNT|SUM|AVG|MIN|MAX|LIKE|BETWEEN|EXISTS|OVER|PARTITION|ROUND|COALESCE|CAST)\b/gi;
+const KW = /^(SELECT|DISTINCT|FROM|WHERE|AND|OR|NOT|IN|IS|NULL|AS|JOIN|LEFT|RIGHT|INNER|OUTER|FULL|CROSS|ON|GROUP|BY|ORDER|HAVING|LIMIT|OFFSET|DESC|ASC|UNION|ALL|INSERT|INTO|VALUES|UPDATE|SET|DELETE|CREATE|TABLE|WITH|CASE|WHEN|THEN|ELSE|END|COUNT|SUM|AVG|MIN|MAX|LIKE|BETWEEN|EXISTS|OVER|PARTITION|ROUND|COALESCE|CAST)$/i;
 function highlightSql(sql) {
   return sql.split(/\r?\n/).map((line) => {
     let h = escapeHtml(line);
@@ -71,7 +71,6 @@ function highlightSql(sql) {
     h = h.replace(/(<span[^>]*>.*?<\/span>)|\b([A-Za-z_]+)\b/g, (m, span, word) =>
       span || (KW.test(word) ? `<span class="tk-kw">${word}</span>` : word)
     );
-    KW.lastIndex = 0;
     return `<span class="ln"></span><span class="lc">${h || " "}</span>`;
   }).map((l) => `<div class="code-line">${l}</div>`).join("");
 }
@@ -413,7 +412,10 @@ function setupQueryPage(page, { upload = null, syncPlaceholder = false, extras =
       const hasSql = !!grid.querySelector(".code").value;
       const n = (countText.textContent.match(/\d+/) || [])[0];
       if (failed) {
-        t.setBot("Sorry, I couldn't answer that. Please check the message below and try again.");
+        // show the backend's message (e.g. "Sorry, I couldn't understand that...") in the chat
+        const msg = errorBox.textContent.trim();
+        t.setBot(escapeHtml(msg || "Sorry, I couldn't answer that. Please try again."));
+        errorBox.hidden = true;
         result.card.hidden = !hasSql;
         if (hasSql) result.show("sql");
       } else {

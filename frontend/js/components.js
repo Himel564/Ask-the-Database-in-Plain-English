@@ -117,6 +117,8 @@ export function createAskCard({
   });
 
   micBtn.addEventListener("click", () => {
+    // FIX: voice -> text is NOT voice-to-voice, so the answer must not be spoken
+    usedVoice = false;
     listening
       ? voice.stop()
       : voice.start(textarea.value);
@@ -187,6 +189,8 @@ export function createAskCard({
   // Submit
   // -------------------------------------------------------------------------
   submitBtn.addEventListener("click", () => {
+    // FIX: pressing Send / Enter is a normal text question, so don't speak the answer
+    usedVoice = false;
     onSubmit(textarea.value);
   });
 
@@ -938,4 +942,3 @@ export function createFileUpload({
     })
   };
 }
-
