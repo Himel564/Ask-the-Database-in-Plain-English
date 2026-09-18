@@ -8,7 +8,6 @@ import {
   normalizeResult, extractSql, extractAnswer, extractFileId, hasRows,
 } from "./api.js";
 import { speakText, stopSpeaking, isSpeaking, makeResultSpeech } from "./speak.js"; // NEW: for voice output
-import { getAnswerInUserLanguage } from "./language.js"; // NEW: multilingual answers
 
 // ---------------------------------------------------------------------------
 // SQL database
@@ -46,7 +45,6 @@ export function initDatabasePage(container) {
       ask.setLoading(true);
       ask.setError("");
       panels.setResult(null);
-      panels.setAnswer(""); // NEW: clear old multilingual answer
       ask.setSpeech(""); // NEW: clear old answer
       try {
         const data = await convertToSql(text);
@@ -56,12 +54,7 @@ export function initDatabasePage(container) {
         // NEW: run the SQL straight away (no need to press Run Query)
         const result = normalizeResult(await executeQuery(sql)) ?? { columns: [], rows: [] };
         panels.setResult(result);
-        ask.setLoading(false); // NEW: stop the spinner as soon as the table is ready
-
-        // NEW: answer in the same language as the question
-        const answer = await getAnswerInUserLanguage(text, result, makeResultSpeech(result));
-        panels.setAnswer(answer);
-        ask.setSpeech(answer);
+        ask.setSpeech(makeResultSpeech(result));
       } catch (e) {
         ask.setError(e.message);
       } finally {
@@ -77,24 +70,84 @@ export function initDatabasePage(container) {
 // Evaluation: ask a question, see the model's generated SQL + its result,
 // then paste in the correct SQL to compare and see the model's accuracy.
 // ---------------------------------------------------------------------------
+function renderMiniTable(rows) {
+  if (!Array.isArray(rows) || rows.length === 0) {
+    return el("p", "eval-sub", "No rows returned.");
+  }
+  const columns = Object.keys(rows[0]);
+  const wrap = el("div", "table-wrap eval-mini-table");
+  const table = el("table");
+
+  const thead = el("thead");
+  const headRow = el("tr");
+  columns.forEach((c) => headRow.append(el("th", "", c.replace(/_/g, " "))));
+  thead.append(headRow);
+
+  const tbody = el("tbody");
+  rows.slice(0, 50).forEach((row) => {
+    const tr = el("tr");
+    columns.forEach((c) => {
+      const value = row[c];
+      const td = el("td", typeof value === "number" ? "num" : "");
+      if (value === null || value === undefined) {
+        td.append(el("span", "null", "null"));
+      } else {
+        td.textContent = typeof value === "object" ? JSON.stringify(value) : String(value);
+      }
+      tr.append(td);
+    });
+    tbody.append(tr);
+  });
+
+  table.append(thead, tbody);
+  wrap.append(table);
+  if (rows.length > 50) wrap.append(el("p", "eval-sub", `Showing first 50 of ${rows.length} rows.`));
+  return wrap;
+}
+
+// NEW: one result column (title + row count + table, or an error message)
+function resultColumn(title, rows, error) {
+  const count = Array.isArray(rows) ? rows.length : 0;
+  const col = el("div", "eval-result-col");
+  col.append(el("h3", "eval-result-heading", error ? title : `${title} (${count} ${count === 1 ? "row" : "rows"})`));
+  col.append(error ? el("div", "error", error) : renderMiniTable(rows));
+  return col;
+}
+
 function createEvalCard({ onCompare }) {
-  const card = html(`
-    <section class="card eval-card">
-      <div>
-        <h2 class="card-title">Evaluate the generated SQL</h2>
-        <p class="card-sub">Generate a query above, then paste the correct SQL query below to see how accurate the model's SQL was.</p>
-      </div>
-      <textarea class="code eval-sql" placeholder="Paste the correct / expected SQL query here." spellcheck="false" rows="6"></textarea>
-      <button class="btn btn-dark compare-btn" disabled></button>
-      <div class="error" role="alert" hidden></div>
-      <div class="eval-result" hidden></div>
-    </section>
+  const grid = html(`
+    <div class="grid">
+      <section class="card eval-card">
+        <div class="card-head">
+          <div>
+            <h2 class="card-title">Your SQL</h2>
+            <p class="card-sub">Paste the correct / expected SQL query for this question.</p>
+          </div>
+        </div>
+        <textarea class="code eval-sql" placeholder="Paste the correct / expected SQL query here." spellcheck="false"></textarea>
+        <button class="btn btn-dark compare-btn" disabled></button>
+        <div class="error" role="alert" hidden></div>
+      </section>
+
+      <section class="card">
+        <div class="card-head">
+          <div>
+            <h2 class="card-title">Results</h2>
+            <p class="card-sub result-count">Compare to see results</p>
+          </div>
+        </div>
+        <div class="eval-score" hidden></div>
+        <div class="result-body"></div>
+      </section>
+    </div>
   `);
 
-  const textarea = card.querySelector(".eval-sql");
-  const compareBtn = card.querySelector(".compare-btn");
-  const errorBox = card.querySelector(".error");
-  const resultBox = card.querySelector(".eval-result");
+  const textarea = grid.querySelector(".eval-sql");
+  const compareBtn = grid.querySelector(".compare-btn");
+  const errorBox = grid.querySelector(".error");
+  const countText = grid.querySelector(".result-count");
+  const scoreBox = grid.querySelector(".eval-score");
+  const body = grid.querySelector(".result-body");
 
   let enabled = false;
   let loading = false;
@@ -102,7 +155,7 @@ function createEvalCard({ onCompare }) {
   function renderButton() {
     compareBtn.disabled = loading || !enabled || !textarea.value.trim();
     compareBtn.innerHTML = `${loading ? spinner : icon("check")} <span></span>`;
-    compareBtn.querySelector("span:last-child").textContent = loading ? "Comparing…" : "Compare & Evaluate"; // FIX
+    compareBtn.querySelector("span").textContent = loading ? "Comparing…" : "Compare & Evaluate";
   }
 
   function setError(msg) {
@@ -110,46 +163,52 @@ function createEvalCard({ onCompare }) {
     errorBox.hidden = !msg;
   }
 
+  // NEW: shows BOTH the model's result and the user's result side by side
   function renderResult(data) {
-    resultBox.innerHTML = "";
+    scoreBox.innerHTML = "";
+    body.innerHTML = "";
+
     if (!data) {
-      resultBox.hidden = true;
+      scoreBox.hidden = true;
+      countText.textContent = "Compare to see results";
+      body.append(el("div", "empty", "No results yet. Paste the correct SQL and press Compare & Evaluate."));
       return;
     }
-    resultBox.hidden = false;
+
+    const g = data.generated_row_count ?? 0;
+    const a = data.actual_row_count ?? 0;
+    countText.textContent = `Model: ${g} ${g === 1 ? "row" : "rows"} · Yours: ${a} ${a === 1 ? "row" : "rows"}`;
 
     const pct = Math.round(data.row_accuracy ?? 0);
     const tone = data.exact_match ? "match" : pct >= 50 ? "partial" : "mismatch";
     const label = data.exact_match ? "100% (exact match)" : `${pct}%`;
 
-    const scoreRow = el("div", "eval-score");
-    scoreRow.append(el("span", "eval-score-label", "Accuracy"));
+    scoreBox.hidden = false;
+    const scoreRow = el("div", "eval-score-row");
+    scoreRow.append(el("span", "eval-score-label", "Accuracy vs. generated SQL"));
     scoreRow.append(el("span", `eval-badge ${tone}`, label));
-    resultBox.append(scoreRow);
-
-    resultBox.append(
+    scoreBox.append(scoreRow);
+    scoreBox.append(
       el("p", "eval-sub", "Based on the percentage of overlapping rows between the generated SQL's result and your correct SQL's result.")
     );
 
-    resultBox.append(
-      el(
-        "p",
-        "eval-sub",
-        `Generated SQL returned ${data.generated_row_count ?? 0} row(s); your SQL returned ${data.actual_row_count ?? 0} row(s).`
-      )
+    // Both results, side by side
+    const resultsGrid = el("div", "eval-results-grid");
+    resultsGrid.append(
+      resultColumn("Model's SQL result", data.generated_rows, data.generated_error && `Generated SQL failed to run: ${data.generated_error}`),
+      resultColumn("Your SQL result", data.actual_rows, data.actual_error && `Could not run your SQL: ${data.actual_error}`)
     );
-
-    if (data.generated_error) resultBox.append(el("p", "eval-sub eval-err", `Generated SQL error: ${data.generated_error}`));
-    if (data.actual_error) resultBox.append(el("p", "eval-sub eval-err", `Your SQL error: ${data.actual_error}`));
+    body.append(resultsGrid);
   }
 
   textarea.addEventListener("input", renderButton);
   compareBtn.addEventListener("click", () => onCompare(textarea.value));
 
   renderButton();
+  renderResult(null);
 
   return {
-    element: card,
+    element: grid,
     enable: () => {
       enabled = true;
       renderButton();
@@ -324,10 +383,7 @@ export function initPdfPage(container) {
       ask.setSpeech(""); // NEW: clear old answer
       try {
         const data = await askPdf(text, uploadState.fileId);
-        // NEW: answer in the same language as the question
-        const pdfAnswer = extractAnswer(data) || "No answer returned.";
-        const answer = await getAnswerInUserLanguage(text, pdfAnswer, pdfAnswer);
-        history.unshift({ question: text, answer: answer, sources: data?.sources });
+        history.unshift({ question: text, answer: extractAnswer(data) || "No answer returned.", sources: data?.sources });
         ask.setSpeech(history[0].answer); // NEW: newest answer is at position 0
         ask.setValue("");
         renderAnswers();
@@ -421,15 +477,14 @@ export function initExcelPage(container) {
           result = normalizeResult(await executeExcelQuery(sql, uploadState.fileId)) ?? { columns: [], rows: [] };
         }
         if (result) panels.setResult(result);
-        ask.setLoading(false); // NEW: stop the spinner as soon as the table is ready
 
-        // NEW: answer in the same language as the question
-        const information = data && data.answer ? extractAnswer(data) : result;
-        const backupText = data && data.answer ? extractAnswer(data) : makeResultSpeech(result);
-        if (information) {
-          const answer = await getAnswerInUserLanguage(text, information, backupText);
-          panels.setAnswer(answer);
-          ask.setSpeech(answer);
+        if (data && typeof data === "object" && data.answer) panels.setAnswer(extractAnswer(data));
+
+        // NEW: speak the answer, or the rows
+        if (data && data.answer) {
+          ask.setSpeech(extractAnswer(data));
+        } else if (result) {
+          ask.setSpeech(makeResultSpeech(result));
         }
       } catch (e) {
         ask.setError(e.message);

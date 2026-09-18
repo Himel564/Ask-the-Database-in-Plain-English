@@ -51,6 +51,8 @@ def evaluate_queries(question, generated_sql, actual_sql):
             "row_accuracy": 0.0,
             "generated_row_count": len(generated_rows) if generated_rows else 0,
             "actual_row_count": len(actual_rows) if actual_rows else 0,
+            "generated_rows": generated_rows or [],
+            "actual_rows": actual_rows or [],
         }
 
     generated_counter = Counter(_row_signature(r) for r in generated_rows)
@@ -71,4 +73,6 @@ def evaluate_queries(question, generated_sql, actual_sql):
         "row_accuracy": row_accuracy,
         "generated_row_count": len(generated_rows),
         "actual_row_count": len(actual_rows),
+        "generated_rows": generated_rows,
+        "actual_rows": actual_rows,
     }

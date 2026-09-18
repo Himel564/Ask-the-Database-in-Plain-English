@@ -271,6 +271,13 @@ td.num { font-weight: 800; font-variant-numeric: tabular-nums; }
 .eval-sub { margin: 10px 0 0; font-size: 13.5px; color: var(--muted); }
 .eval-sub.eval-err { color: var(--danger); }
 .eval-result { border-top: 1px solid var(--line); padding-top: 14px; margin-top: 4px; }
+.eval-results-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; }
+.eval-result-col { min-width: 0; } /* NEW: lets wide tables scroll inside their own column */
+.eval-result-heading { margin: 0 0 8px; font-size: 14px; font-weight: 800; }
+.eval-mini-table { max-height: 320px; }
+@media (max-width: 720px) {
+  .eval-results-grid { grid-template-columns: 1fr; }
+}
 
 /* Pie chart */
 .pie-chart { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
@@ -281,4 +288,3 @@ td.num { font-weight: 800; font-variant-numeric: tabular-nums; }
 .pie-label { color: var(--ink); }
 .pie-legend strong { font-variant-numeric: tabular-nums; }
 .pie-pct { color: var(--muted); font-size: 13px; }
-.result-body + .answer-inline { margin-top: 14px; } /* NEW: space between table and summary */
