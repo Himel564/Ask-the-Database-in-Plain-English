@@ -21,6 +21,9 @@ Table: salary(
     effective_from  DATE NOT NULL
 )
 
+
+
+
 Table: address(
     id          INTEGER PRIMARY KEY,
     employee_id INTEGER REFERENCES employee(id),

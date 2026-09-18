@@ -14,7 +14,6 @@ DB_CONFIG = {
     "user": os.getenv("DB_USER", "postgres"),
     "password": os.getenv("DB_PASSWORD", "postgres"),
 }
-
 def create_tables():
     commands = [
         """
