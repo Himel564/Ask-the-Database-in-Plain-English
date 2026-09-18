@@ -3,6 +3,7 @@ import ast
 from pathlib import Path
 from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import Response  # NEW: to send voice audio
 from pydantic import BaseModel
 import pandas as pd
 
@@ -10,6 +11,7 @@ import io
 from database.db_job import execute_query
 from backend.llm_model import generate_response, load_and_index_pdf, query_pdf_context,generate_pandas_query
 from backend.evaluation import evaluate_queries
+from backend.multilingual import transcribe_audio, reply_in_user_language, text_to_speech  # NEW: multilingual
 
 app = FastAPI(title="QueryAI Backend")
 
@@ -267,3 +269,53 @@ def evaluate_sql(request: EvaluateRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Could not evaluate the queries: {e}")
     return result
+
+# ---------------------------------------------------------------------------
+# NEW: Multilingual support (English, Bengali, Hindi)
+# ---------------------------------------------------------------------------
+class ReplyRequest(BaseModel):
+    question: str
+    information: str
+
+
+# Voice -> text. Whisper detects the spoken language by itself.
+@app.post("/transcribe_audio")
+async def transcribe_audio_file(file: UploadFile = File(...)):
+    audio_bytes = await file.read()
+    if not audio_bytes:
+        raise HTTPException(status_code=400, detail="No audio received.")
+    try:
+        text = transcribe_audio(audio_bytes, file.filename or "voice.webm")
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=500, detail=f"Could not understand the audio: {e}")
+    return {"text": text}
+
+
+# Writes the final answer in the same language as the question.
+@app.post("/reply_in_user_language")
+def reply_in_language(request: ReplyRequest):
+    try:
+        answer = reply_in_user_language(request.question, request.information)
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=500, detail=f"Could not create the answer: {e}")
+    return {"answer": answer}
+
+
+# NEW: clear Bengali / Hindi voice. Returns an MP3 file.
+class SpeakRequest(BaseModel):
+    text: str
+    language: str  # "bn" or "hi"
+
+
+@app.post("/speak_text")
+def speak_text(request: SpeakRequest):
+    if request.language not in ("bn", "hi"):
+        raise HTTPException(status_code=400, detail="Only Bengali (bn) and Hindi (hi) are supported.")
+    try:
+        audio = text_to_speech(request.text, request.language)
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=500, detail=f"Could not create the voice: {e}")
+    return Response(content=audio, media_type="audio/mpeg")

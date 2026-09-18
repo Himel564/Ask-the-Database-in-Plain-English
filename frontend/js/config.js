@@ -23,6 +23,11 @@ const ENDPOINTS = {
   excelUpload: "/upload_excel",
   excelAsk: "/ask_excel",
   excelExecute: "/execute_excel_query",
+
+  // NEW: multilingual
+  transcribeAudio: "/transcribe_audio",
+  replyInLanguage: "/reply_in_user_language",
+  speakText: "/speak_text",
 };
 
 export const API = Object.fromEntries(

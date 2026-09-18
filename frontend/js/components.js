@@ -1,6 +1,6 @@
 import { icon } from "./icons.js";
 import { el, html, spinner, copyText } from "./utils.js";
-import { createVoiceInput } from "./voice.js";
+import { createWhisperVoiceInput as createVoiceInput } from "./voice.js"; // NEW: multilingual voice
 import { speakText, stopSpeaking } from "./speak.js";
 import { renderChart, renderPieChart } from "./chart.js";
 
@@ -208,7 +208,7 @@ export function createAskCard({
       <span></span>
     `;
 
-    submitBtn.querySelector("span").textContent =
+    submitBtn.querySelector("span:last-child").textContent = // FIX: put text in the label, not the spinner
       loading ? loadingLabel : buttonLabel;
   }
 
@@ -398,9 +398,9 @@ export function createQueryPanels({
           </div>
         </div>
 
-        <div class="answer-inline" hidden></div>
-
         <div class="result-body"></div>
+
+        <div class="answer-inline" hidden></div>
       </section>
 
     </div>
@@ -437,7 +437,7 @@ export function createQueryPanels({
       <span></span>
     `;
 
-    runBtn.querySelector("span").textContent =
+    runBtn.querySelector("span:last-child").textContent = // FIX: text in label, not spinner
       running ? "Running…" : "Run Query";
 
     copyBtn.disabled = !code.value;
@@ -871,7 +871,7 @@ export function createFileUpload({
         <span></span>
       `;
 
-      btn.querySelector("span").textContent =
+      btn.querySelector("span:last-child").textContent = // FIX: text in label, not spinner
         uploading ? "Uploading…" : "Upload";
 
       btn.disabled = uploading || !!state.error;

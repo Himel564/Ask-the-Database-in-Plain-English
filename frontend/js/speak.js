@@ -1,3 +1,7 @@
+import { detectLanguage } from "./language.js"; // NEW: multilingual speech
+import { getSpeechAudio } from "./api.js"; // NEW: clear Bengali / Hindi voice
+
+let currentAudio = null; // NEW: the Bengali / Hindi audio that is playing now
 // NEW FILE: speak.js
 // This file reads text out loud using the browser's built-in voice (speechSynthesis).
 // It uses a female American voice. Works best in Chrome and Edge.
@@ -20,6 +24,38 @@ function getFemaleVoice() {
   // If no female voice is found, return null (browser uses its default voice)
   return null;
 }
+// NEW: find a voice for Bengali or Hindi (e.g. "bn-IN" or "hi-IN")
+function getVoiceForLanguage(language) {
+  const voices = window.speechSynthesis.getVoices();
+  const shortCode = language.split("-")[0]; // "bn" or "hi"
+
+  for (let i = 0; i < voices.length; i++) {
+    if (voices[i].lang === language) return voices[i];
+  }
+  for (let i = 0; i < voices.length; i++) {
+    if (voices[i].lang.startsWith(shortCode)) return voices[i];
+  }
+  return null;
+}
+
+
+// NEW: play a clear Bengali / Hindi voice made by the backend.
+// If the backend voice fails, use the browser's voice instead.
+async function playClearVoice(text, language) {
+  try {
+    const audioFile = await getSpeechAudio(text, language.split("-")[0]); // "bn" or "hi"
+    currentAudio = new Audio(URL.createObjectURL(audioFile));
+    currentAudio.playbackRate = 1.25; // NEW: speak a little faster (1 = normal, 1.5 = fast)
+    currentAudio.play();
+  } catch (e) {
+    console.error("Clear voice failed, using browser voice:", e);
+    const speech = new SpeechSynthesisUtterance(text);
+    speech.lang = language;
+    const languageVoice = getVoiceForLanguage(language);
+    if (languageVoice) speech.voice = languageVoice;
+    window.speechSynthesis.speak(speech);
+  }
+}
 
 // Read the given text out loud
 export function speakText(text) {
@@ -30,20 +66,24 @@ export function speakText(text) {
   }
 
   // Stop anything that is already being spoken
-  window.speechSynthesis.cancel();
+  stopSpeaking(); // NEW: also stops Bengali / Hindi audio
 
   // Nothing to speak
   if (!text) return;
 
-  const speech = new SpeechSynthesisUtterance(text);
-  speech.lang = "en-US"; // American accent
-  speech.rate = 1;       // normal speed
-
-  // Use a female American voice if the browser has one
-  const femaleVoice = getFemaleVoice();
-  if (femaleVoice) {
-    speech.voice = femaleVoice;
+  // NEW: Bengali or Hindi -> use the clear Google voice from the backend
+  const language = detectLanguage(text);
+  if (language !== "en-US") {
+    playClearVoice(text, language);
+    return;
   }
+
+  // English: same female American voice as before
+  const speech = new SpeechSynthesisUtterance(text);
+  speech.lang = "en-US";
+  speech.rate = 1; // normal speed
+  const femaleVoice = getFemaleVoice();
+  if (femaleVoice) speech.voice = femaleVoice;
 
   window.speechSynthesis.speak(speech);
 }
@@ -53,11 +93,17 @@ export function stopSpeaking() {
   if (window.speechSynthesis) {
     window.speechSynthesis.cancel();
   }
+  // NEW: also stop Bengali / Hindi audio
+  if (currentAudio) {
+    currentAudio.pause();
+    currentAudio = null;
+  }
 }
 
 // Check if the browser is speaking right now
 export function isSpeaking() {
-  return window.speechSynthesis && window.speechSynthesis.speaking;
+  const audioPlaying = currentAudio && !currentAudio.paused; // NEW: Bengali / Hindi audio
+  return (window.speechSynthesis && window.speechSynthesis.speaking) || audioPlaying;
 }
 
 // Make a short sentence from a table result

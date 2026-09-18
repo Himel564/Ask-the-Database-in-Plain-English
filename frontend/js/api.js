@@ -47,6 +47,22 @@ export const uploadExcel = (file) => postFile(API.excelUpload, file);
 export const askExcel = (question, fileId) => postJson(API.excelAsk, { question, file_id: fileId });
 export const executeExcelQuery = (query, fileId) => postJson(API.excelExecute, { query, file_id: fileId });
 
+// NEW: Multilingual
+export const transcribeAudio = (audioFile) => postFile(API.transcribeAudio, audioFile);
+export const replyInUserLanguage = (question, information) =>
+  postJson(API.replyInLanguage, { question, information });
+
+// NEW: get a clear Bengali / Hindi voice from the backend (MP3 audio)
+export async function getSpeechAudio(text, language) {
+  const res = await fetch(API.speakText, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ text, language }),
+  });
+  if (!res.ok) throw new Error("Could not create the voice.");
+  return res.blob(); // the audio file
+}
+
 export async function checkBackend() {
   try { await fetch(API.health); return true; } catch { return false; }
 }

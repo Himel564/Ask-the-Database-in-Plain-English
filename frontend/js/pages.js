@@ -8,6 +8,7 @@ import {
   normalizeResult, extractSql, extractAnswer, extractFileId, hasRows,
 } from "./api.js";
 import { speakText, stopSpeaking, isSpeaking, makeResultSpeech } from "./speak.js"; // NEW: for voice output
+import { getAnswerInUserLanguage } from "./language.js"; // NEW: multilingual answers
 
 // ---------------------------------------------------------------------------
 // SQL database
@@ -45,6 +46,7 @@ export function initDatabasePage(container) {
       ask.setLoading(true);
       ask.setError("");
       panels.setResult(null);
+      panels.setAnswer(""); // NEW: clear old multilingual answer
       ask.setSpeech(""); // NEW: clear old answer
       try {
         const data = await convertToSql(text);
@@ -54,7 +56,12 @@ export function initDatabasePage(container) {
         // NEW: run the SQL straight away (no need to press Run Query)
         const result = normalizeResult(await executeQuery(sql)) ?? { columns: [], rows: [] };
         panels.setResult(result);
-        ask.setSpeech(makeResultSpeech(result));
+        ask.setLoading(false); // NEW: stop the spinner as soon as the table is ready
+
+        // NEW: answer in the same language as the question
+        const answer = await getAnswerInUserLanguage(text, result, makeResultSpeech(result));
+        panels.setAnswer(answer);
+        ask.setSpeech(answer);
       } catch (e) {
         ask.setError(e.message);
       } finally {
@@ -95,7 +102,7 @@ function createEvalCard({ onCompare }) {
   function renderButton() {
     compareBtn.disabled = loading || !enabled || !textarea.value.trim();
     compareBtn.innerHTML = `${loading ? spinner : icon("check")} <span></span>`;
-    compareBtn.querySelector("span").textContent = loading ? "Comparing…" : "Compare & Evaluate";
+    compareBtn.querySelector("span:last-child").textContent = loading ? "Comparing…" : "Compare & Evaluate"; // FIX
   }
 
   function setError(msg) {
@@ -317,7 +324,10 @@ export function initPdfPage(container) {
       ask.setSpeech(""); // NEW: clear old answer
       try {
         const data = await askPdf(text, uploadState.fileId);
-        history.unshift({ question: text, answer: extractAnswer(data) || "No answer returned.", sources: data?.sources });
+        // NEW: answer in the same language as the question
+        const pdfAnswer = extractAnswer(data) || "No answer returned.";
+        const answer = await getAnswerInUserLanguage(text, pdfAnswer, pdfAnswer);
+        history.unshift({ question: text, answer: answer, sources: data?.sources });
         ask.setSpeech(history[0].answer); // NEW: newest answer is at position 0
         ask.setValue("");
         renderAnswers();
@@ -411,14 +421,15 @@ export function initExcelPage(container) {
           result = normalizeResult(await executeExcelQuery(sql, uploadState.fileId)) ?? { columns: [], rows: [] };
         }
         if (result) panels.setResult(result);
+        ask.setLoading(false); // NEW: stop the spinner as soon as the table is ready
 
-        if (data && typeof data === "object" && data.answer) panels.setAnswer(extractAnswer(data));
-
-        // NEW: speak the answer, or the rows
-        if (data && data.answer) {
-          ask.setSpeech(extractAnswer(data));
-        } else if (result) {
-          ask.setSpeech(makeResultSpeech(result));
+        // NEW: answer in the same language as the question
+        const information = data && data.answer ? extractAnswer(data) : result;
+        const backupText = data && data.answer ? extractAnswer(data) : makeResultSpeech(result);
+        if (information) {
+          const answer = await getAnswerInUserLanguage(text, information, backupText);
+          panels.setAnswer(answer);
+          ask.setSpeech(answer);
         }
       } catch (e) {
         ask.setError(e.message);
