@@ -3,6 +3,7 @@ import { el, html, spinner, copyText } from "./utils.js";
 import { createWhisperVoiceInput as createVoiceInput } from "./voice.js"; // NEW: multilingual voice
 import { speakText, stopSpeaking } from "./speak.js";
 import { renderChart, renderPieChart } from "./chart.js";
+import { renderSmartChart, markSuggestedViews } from "./smartChart.js"; // NEW: smart charts (Ask Database page only)
 
 let uid = 0;
 
@@ -322,7 +323,8 @@ export function createAskCard({
 export function createQueryPanels({
   queryTitle = "Generated SQL",
   onRun,
-  hideRunButton = false
+  hideRunButton = false,
+  smartCharts = false // NEW: Ask Database page only -> line chart + auto chart choice
 }) {
   const grid = html(`
     <div class="grid">
@@ -398,6 +400,27 @@ export function createQueryPanels({
                 <path d="M22 12A10 10 0 0 0 12 2v10z"></path>
               </svg>
             </button>
+
+            ${smartCharts ? `
+            <button
+              class="icon-btn plain"
+              data-view="line"
+              aria-label="Line chart view"
+            >
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M3 3v18h18"></path>
+                <path d="M7 15l4-5 3 3 5-6"></path>
+              </svg>
+            </button>` : ""}
 
           </div>
         </div>
@@ -498,6 +521,16 @@ export function createQueryPanels({
         )
       );
 
+      return;
+    }
+
+    // -----------------------------------------------------------------------
+    // NEW: smart charts (only when smartCharts is on)
+    // -----------------------------------------------------------------------
+    if (smartCharts && view !== "table") {
+      const type = view === "chart" ? "bar" : view;
+      const spec = (result.charts || []).find((c) => c.type === type);
+      renderSmartChart(body, result, type, spec);
       return;
     }
 
@@ -620,6 +653,13 @@ export function createQueryPanels({
 
     setResult: (r) => {
       result = r;
+      // NEW: open the best suggested chart automatically (Ask Database page only)
+      if (smartCharts) {
+        const charts = r?.charts || [];
+        view = charts.length ? (charts[0].type === "bar" ? "chart" : charts[0].type) : "table";
+        viewButtons.forEach((b) => b.classList.toggle("active", b.dataset.view === view));
+        markSuggestedViews(viewButtons, charts);
+      }
       renderResults();
     },
 

@@ -252,7 +252,7 @@ function buildResultCard(grid, { sourceLabel, getQuestion, getTiming }) {
 
   // title "Query Results · Bar chart"
   const baseTitle = resTitle.textContent;
-  const viewNames = { table: "", chart: " · Bar chart", pie: " · Pie chart" };
+  const viewNames = { table: "", chart: " · Bar chart", pie: " · Pie chart", line: " · Line chart" }; // NEW: line
   const setTitle = () => {
     const active = resSec.querySelector("[data-view].active");
     resTitle.textContent = baseTitle + (viewNames[active?.dataset.view] || "");

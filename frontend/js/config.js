@@ -15,6 +15,7 @@ const ENDPOINTS = {
   health: "/health",
   convertSql: "/convert_to_sql",
   executeQuery: "/execute_query",
+  askWithChart: "/ask_with_chart", // NEW: smart charts
   evaluateSql: "/evaluate_sql",
 
   pdfUpload: "/upload_pdf",

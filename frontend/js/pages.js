@@ -3,6 +3,7 @@ import { icon } from "./icons.js";
 import { el, html, spinner, copyText } from "./utils.js";
 import {
   convertToSql, executeQuery, evaluateSql,
+  askWithChart, // NEW: smart charts (Ask Database page)
   uploadPdf, askPdf,
   uploadExcel, askExcel, executeExcelQuery,
   normalizeResult, extractSql, extractAnswer, extractFileId, hasRows,
@@ -16,6 +17,7 @@ import { getAnswerInUserLanguage } from "./language.js"; // NEW: multilingual an
 export function initDatabasePage(container) {
   const panels = createQueryPanels({
     hideRunButton: true, // NEW: no Run Query button, the answer comes directly
+    smartCharts: true, // NEW: line chart + automatic chart choice
     onRun: async (sql) => {
       panels.setRunning(true);
       ask.setError("");
@@ -49,13 +51,13 @@ export function initDatabasePage(container) {
       panels.setAnswer(""); // NEW: clear old multilingual answer
       ask.setSpeech(""); // NEW: clear old answer
       try {
-        const data = await convertToSql(text);
+        // NEW (smart charts): one call returns the SQL, the rows and the best chart(s)
+        const data = await askWithChart(text);
         const sql = extractSql(data); // NEW: keep the SQL in a variable
         panels.setSql(sql);
 
-        // NEW: run the SQL straight away (no need to press Run Query)
-        const result = normalizeResult(await executeQuery(sql)) ?? { columns: [], rows: [] };
-        panels.setResult(result);
+        const result = normalizeResult(data) ?? { columns: [], rows: [] };
+        panels.setResult({ ...result, charts: Array.isArray(data?.charts) ? data.charts : [] });
         ask.setLoading(false); // NEW: stop the spinner as soon as the table is ready
 
         // NEW: answer in the same language as the question

@@ -12,6 +12,8 @@ from database.db_job import execute_query
 from backend.llm_model import generate_response, load_and_index_pdf, query_pdf_context,generate_pandas_query
 from backend.evaluation import evaluate_queries
 from backend.multilingual import transcribe_audio, reply_in_user_language, text_to_speech  # NEW: multilingual
+from backend.llm_model import generate_sql_with_chart  # NEW: smart charts
+from backend.chart_selector import select_charts  # NEW: smart charts
 
 app = FastAPI(title="QueryAI Backend")
 
@@ -78,6 +80,34 @@ def convert_to_sql(request: QuestionRequest):
     if _is_invalid(sql):  # FIX: meaningless / unrelated input
         raise HTTPException(status_code=400, detail=INVALID_SQL_MESSAGE)
     return {"sql": sql}
+
+
+# NEW: Ask Database page -> SQL + result rows + best chart(s) in one call
+@app.post("/ask_with_chart")
+def ask_with_chart(request: QuestionRequest):
+    question = request.question.strip()
+    if not question:
+        raise HTTPException(status_code=400, detail="Question is empty.")
+    try:
+        out = generate_sql_with_chart(question)
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=500, detail=f"Could not generate SQL: {e}")
+    if isinstance(out, dict) and "error" in out:
+        raise HTTPException(status_code=500, detail=f"Could not generate SQL: {out['error']}")
+
+    sql = (out.get("sql") or "").strip()
+    if not sql or _is_invalid(sql):
+        raise HTTPException(status_code=400, detail=INVALID_SQL_MESSAGE)
+
+    result = execute_query(sql)
+    if isinstance(result, dict) and "error" in result:
+        raise HTTPException(status_code=400, detail=result["error"])
+
+    rows = result if isinstance(result, list) else []
+    columns = list(rows[0].keys()) if rows else []
+    charts = select_charts(out.get("charts"), columns, rows, question)  # NEW: question -> user's chart request first
+    return {"sql": sql, "columns": columns, "rows": rows, "charts": charts}
 
 
 @app.post("/execute_query")

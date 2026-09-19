@@ -34,6 +34,7 @@ const postFile = (url, file) => {
 
 // Database
 export const convertToSql = (question) => postJson(API.convertSql, { question });
+export const askWithChart = (question) => postJson(API.askWithChart, { question }); // NEW: SQL + rows + chart choice
 export const executeQuery = (query) => postJson(API.executeQuery, { query });
 export const evaluateSql = (question, generatedSql, actualSql) =>
   postJson(API.evaluateSql, { question, generated_sql: generatedSql, actual_sql: actualSql });
