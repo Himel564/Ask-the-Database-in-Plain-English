@@ -10,12 +10,8 @@ import pdfplumber
 
 load_dotenv(r"backend\.env")
 
-# In-memory store for the most recently uploaded PDF's extracted content.
-# Simple single-document cache: fine for this app since only one PDF is
-# active at a time (matches the existing /api/upload-pdf -> /api/ask-pdf flow).
 _pdf_store = {"filename": None, "context": None, "pages": 0}
 
-# Keep the prompt within a safe size for the model's context window.
 _MAX_CONTEXT_CHARS = 20000
 
 
@@ -36,12 +32,10 @@ def load_and_index_pdf(file_path):
     with any tabular data pdfplumber can extract, and cache the combined
     text as context for later question answering."""
     try:
-        # 1. LangChain doc loader loads the PDF (one Document per page).
+        #
         loader = PDFPlumberLoader(file_path)
         documents = loader.load()
 
-        # 2. Pull out tabular data page-by-page and merge it into that
-        #    page's content, so tables aren't lost in plain text extraction.
         with pdfplumber.open(file_path) as pdf:
             for i, page in enumerate(pdf.pages):
                 if i >= len(documents):
@@ -79,7 +73,6 @@ def query_pdf_context(question):
     if not context:
         return "Please upload a PDF first before asking questions about it."
 
-    # Guard against overly long prompts.
     if len(context) > _MAX_CONTEXT_CHARS:
         context = context[:_MAX_CONTEXT_CHARS]
 
@@ -129,37 +122,90 @@ def generate_response(question):
     )
 
     template = PromptTemplate(
-        input_variables=["question", "schema"],
-        template="""
-    You are an expert SQL generator.
+    input_variables=["question", "schema"],
+    template="""
+        You are an expert SQL generator.
 
-    Convert the user's natural language question into ONE valid SQL query.
+        Convert the user's natural language question into ONE valid SQL query.
 
-    Database dialect: PostgreSQL
+        Database dialect: PostgreSQL
 
-    Database schema:
-    {schema}
+        Database schema:
+        {schema}
 
-    Rules:
-    1. Use only tables and columns present in the schema.
-    2. Do not invent columns.
-    3. Do not use INSERT, UPDATE, DELETE, DROP, ALTER, TRUNCATE or CREATE.
-    4. Generate only SELECT queries.
-    5. Correctly use JOIN, GROUP BY, ORDER BY, aggregate functions and subqueries when required.
-    6. For "highest", "lowest", "maximum" or "minimum" questions, generate logically correct SQL.
-    7. Return ONLY the SQL query.
-    8. Do not use markdown.
-    9. Do not include explanations.
-    10. If the user input is NOT a clear question that can be answered from this schema
-        (for example greetings like "ok", "hi", "thanks", random words, meaningless text,
-        or questions about data that does not exist in the schema), return exactly:
-        INVALID_QUESTION
-        and nothing else.
+        Rules:
+        1. Use only tables and columns present in the schema.
+        2. Do not invent columns.
+        3. Do not use INSERT, UPDATE, DELETE, DROP, ALTER, TRUNCATE or CREATE.
+        4. Generate only SELECT queries.
+        5. Correctly use JOIN, GROUP BY, ORDER BY, aggregate functions and subqueries when required.
+        6. For "highest", "lowest", "maximum", "minimum", "top N", or "second highest/lowest" questions:
+        - Always consider only the latest record when a history table exists (e.g. salary history with effective_from).
+        - Use DISTINCT when ranking values to avoid duplicates from the same entity.
+        - Use ORDER BY with LIMIT/OFFSET for ranking.
+        7. Always ensure each entity (e.g. employee) contributes only its most recent record when multiple exist.
+        8. Return ONLY the SQL query.
+        9. Do not use markdown.
+        10. Do not include explanations.
+        11. If the user input is NOT a clear question that can be answered from this schema
+            (for example greetings like "ok", "hi", "thanks", random words, meaningless text,
+            or questions about data that does not exist in the schema), return exactly:
+            INVALID_QUESTION
+            and nothing else.
 
-    User question:
-    {question}
-    """
-    )
+        ### Examples
+
+        User question: "Find the highest salary with employee details"
+        SQL:
+        WITH latest_salary AS (
+            SELECT s.employee_id, s.amount,
+                ROW_NUMBER() OVER (PARTITION BY s.employee_id ORDER BY s.effective_from DESC) AS rn
+            FROM salary s
+        )
+        SELECT e.id, e.name, e.hire_date, e.manager_id, e.dept_id, ls.amount
+        FROM latest_salary ls
+        JOIN employee e ON e.id = ls.employee_id
+        WHERE ls.rn = 1
+        ORDER BY ls.amount DESC
+        LIMIT 1;
+
+        User question: "Find the second highest salary with employee details"
+        SQL:
+        WITH latest_salary AS (
+            SELECT s.employee_id, s.amount,
+                ROW_NUMBER() OVER (PARTITION BY s.employee_id ORDER BY s.effective_from DESC) AS rn
+            FROM salary s
+        )
+        SELECT e.id, e.name, e.hire_date, e.manager_id, e.dept_id, ls.amount
+        FROM latest_salary ls
+        JOIN employee e ON e.id = ls.employee_id
+        WHERE ls.rn = 1
+        AND ls.amount = (
+            SELECT DISTINCT amount
+            FROM latest_salary
+            WHERE rn = 1
+            ORDER BY amount DESC
+            OFFSET 1 LIMIT 1
+        );
+
+        User question: "Which city has the most employees?"
+        SQL:
+        SELECT city
+        FROM address
+        GROUP BY city
+        ORDER BY COUNT(DISTINCT employee_id) DESC
+        LIMIT 1;
+
+        User question: "List all departments with their head of department"
+        SQL:
+        SELECT d.id, d.name, d.location, e.name AS head_name
+        FROM department d
+        JOIN employee e ON d.head_of_department = e.id;
+
+        User question:
+        {question}
+        """
+        )
 
     chain = template | model | StrOutputParser()
     try:
@@ -168,7 +214,7 @@ def generate_response(question):
             "schema": database_schema
         })
     except Exception as e:
-        return {"error":str(e)}
+        return {"error":"LLM model cannot be reached due to token limitation. Please provide a new token. "}
     else:
         return result
 
@@ -273,14 +319,10 @@ def generate_pandas_query(question,column_names):
             "column_names": column_names
         })
     except Exception as e:
-        return {"error":str(e)}
+        return {"error":"LLM model cannot be reached due to token limitation. Please provide a new token."}
     else:
         return result
 
-
-# ---------------------------------------------------------------------------
-# NEW: SQL + chart suggestion in one call (used only by the Ask Database page)
-# ---------------------------------------------------------------------------
 import json
 import re as _re
 
@@ -301,7 +343,7 @@ def _parse_sql_chart_json(text):
             return {"sql": sql, "charts": charts}
         except (ValueError, AttributeError):
             pass
-    # the model returned plain SQL instead of JSON
+   
     if _re.match(r"^\s*(with|select)\b", cleaned, _re.I):
         return {"sql": cleaned, "charts": []}
     return {"sql": "", "charts": []}
@@ -316,69 +358,69 @@ def generate_sql_with_chart(question):
     template = PromptTemplate(
     input_variables=["question", "schema"],
     template="""
-You are an expert SQL generator and data-visualisation assistant.
+        You are an expert SQL generator and data-visualisation assistant.
 
-Convert the user's natural language question into ONE valid SQL query,
-and suggest which chart(s) best represent the result.
+        Convert the user's natural language question into ONE valid SQL query,
+        and suggest which chart(s) best represent the result.
 
-Database dialect: PostgreSQL
+        Database dialect: PostgreSQL
 
-Database schema:
-{schema}
+        Database schema:
+        {schema}
 
-SQL rules:
-1. Use only tables and columns present in the schema. Never invent columns.
-2. Generate only SELECT queries (no INSERT, UPDATE, DELETE, DROP, ALTER, TRUNCATE, CREATE).
-3. Correctly use JOIN, GROUP BY, ORDER BY, aggregate functions and subqueries when required.
-4. Give every computed column a clear snake_case alias (e.g. employee_count, avg_salary, hire_year).
-5. For time-based questions, return one row per period ordered by the period
-   (for years use EXTRACT(YEAR FROM ...)::int AS <name>_year).
-6. Ranking questions ("highest", "lowest", "top N", "second highest/lowest"):
-   - If a history table exists for the entity in question (e.g. salary history
-     with effective_from), use ROW_NUMBER() OVER (PARTITION BY entity_id
-     ORDER BY effective_from DESC) to isolate only each entity's latest record
-     before ranking. Do not apply this if no history table is involved.
-   - Use DISTINCT when ranking values to avoid duplicates from the same entity.
-   - Use ORDER BY with LIMIT/OFFSET for "Nth highest/lowest" questions.
+        SQL rules:
+        1. Use only tables and columns present in the schema. Never invent columns.
+        2. Generate only SELECT queries (no INSERT, UPDATE, DELETE, DROP, ALTER, TRUNCATE, CREATE).
+        3. Correctly use JOIN, GROUP BY, ORDER BY, aggregate functions and subqueries when required.
+        4. Give every computed column a clear snake_case alias (e.g. employee_count, avg_salary, hire_year).
+        5. For time-based questions, return one row per period ordered by the period
+        (for years use EXTRACT(YEAR FROM ...)::int AS <name>_year).
+        6. Ranking questions ("highest", "lowest", "top N", "second highest/lowest"):
+        - If a history table exists for the entity in question (e.g. salary history
+            with effective_from), use ROW_NUMBER() OVER (PARTITION BY entity_id
+            ORDER BY effective_from DESC) to isolate only each entity's latest record
+            before ranking. Do not apply this if no history table is involved.
+        - Use DISTINCT when ranking values to avoid duplicates from the same entity.
+        - Use ORDER BY with LIMIT/OFFSET for "Nth highest/lowest" questions.
 
-Chart rules (the "charts" list):
-- Each chart is an object: type, x, y, reason.
-  "x" and "y" MUST be exact column aliases from your SELECT. "y" must be numeric.
-  "reason" is a short phrase (max 8 words).
-- Change over time (years, months, dates) -> "line". Add "bar" too if there
-  are only a few periods.
-- Comparing categories (departments, cities, roles) -> "bar".
-- Parts of a whole / share / breakdown / count per category with 6 or fewer
-  categories -> also "pie". Never use "pie" for averages, percentages or rates.
-- Single value, one row, or a plain list of records (names, details) -> [] (table only).
-- Put the best chart first. Include every chart that is genuinely suitable.
-- If the user explicitly asks for a chart type (pie, bar, line), put that chart
-  FIRST in the list, even if another chart would normally be preferred.
+        Chart rules (the "charts" list):
+        - Each chart is an object: type, x, y, reason.
+        "x" and "y" MUST be exact column aliases from your SELECT. "y" must be numeric.
+        "reason" is a short phrase (max 8 words).
+        - Change over time (years, months, dates) -> "line". Add "bar" too if there
+        are only a few periods.
+        - Comparing categories (departments, cities, roles) -> "bar".
+        - Parts of a whole / share / breakdown / count per category with 6 or fewer
+        categories -> also "pie". Never use "pie" for averages, percentages or rates.
+        - Single value, one row, or a plain list of records (names, details) -> [] (table only).
+        - Put the best chart first. Include every chart that is genuinely suitable.
+        - If the user explicitly asks for a chart type (pie, bar, line), put that chart
+        FIRST in the list, even if another chart would normally be preferred.
 
-Output format:
-Return ONLY a raw JSON object — no markdown, no ```json fences, no explanation:
-{{"sql": "<the SQL query>", "charts": [{{"type": "bar", "x": "<column>", "y": "<column>", "reason": "<short phrase>"}}]}}
+        Output format:
+        Return ONLY a raw JSON object — no markdown, no ```json fences, no explanation:
+        {{"sql": "<the SQL query>", "charts": [{{"type": "bar", "x": "<column>", "y": "<column>", "reason": "<short phrase>"}}]}}
 
-If the user input is NOT a clear question that can be answered from this schema
-(greetings like "ok", "hi", "thanks", random words, meaningless text, or data
-that does not exist in the schema), return exactly:
-{{"sql": "INVALID_QUESTION", "charts": []}}
+        If the user input is NOT a clear question that can be answered from this schema
+        (greetings like "ok", "hi", "thanks", random words, meaningless text, or data
+        that does not exist in the schema), return exactly:
+        {{"sql": "INVALID_QUESTION", "charts": []}}
 
-### Examples
+        ### Examples
 
-User question: "Find the second highest salary with employee details"
-{{"sql": "WITH latest_salary AS (SELECT s.employee_id, s.amount, ROW_NUMBER() OVER (PARTITION BY s.employee_id ORDER BY s.effective_from DESC) AS rn FROM salary s) SELECT e.id, e.name, e.hire_date, e.manager_id, e.dept_id, ls.amount AS salary_amount FROM latest_salary ls JOIN employee e ON e.id = ls.employee_id WHERE ls.rn = 1 AND ls.amount = (SELECT DISTINCT amount FROM latest_salary WHERE rn = 1 ORDER BY amount DESC OFFSET 1 LIMIT 1);", "charts": []}}
+        User question: "Find the second highest salary with employee details"
+        {{"sql": "WITH latest_salary AS (SELECT s.employee_id, s.amount, ROW_NUMBER() OVER (PARTITION BY s.employee_id ORDER BY s.effective_from DESC) AS rn FROM salary s) SELECT e.id, e.name, e.hire_date, e.manager_id, e.dept_id, ls.amount AS salary_amount FROM latest_salary ls JOIN employee e ON e.id = ls.employee_id WHERE ls.rn = 1 AND ls.amount = (SELECT DISTINCT amount FROM latest_salary WHERE rn = 1 ORDER BY amount DESC OFFSET 1 LIMIT 1);", "charts": []}}
 
-User question: "Show employees by department"
-{{"sql": "SELECT d.name AS department_name, COUNT(e.id) AS employee_count FROM employee e JOIN department d ON e.dept_id = d.id GROUP BY d.name;", "charts": [{{"type": "pie", "x": "department_name", "y": "employee_count", "reason": "breakdown across few categories"}}, {{"type": "bar", "x": "department_name", "y": "employee_count", "reason": "compare category sizes"}}]}}
+        User question: "Show employees by department"
+        {{"sql": "SELECT d.name AS department_name, COUNT(e.id) AS employee_count FROM employee e JOIN department d ON e.dept_id = d.id GROUP BY d.name;", "charts": [{{"type": "pie", "x": "department_name", "y": "employee_count", "reason": "breakdown across few categories"}}, {{"type": "bar", "x": "department_name", "y": "employee_count", "reason": "compare category sizes"}}]}}
 
-User question: "Which city has the most employees?"
-{{"sql": "SELECT a.city AS city, COUNT(DISTINCT e.id) AS employee_count FROM address a JOIN employee e ON e.address_id = a.id GROUP BY a.city ORDER BY employee_count DESC LIMIT 1;", "charts": []}}
+        User question: "Which city has the most employees?"
+        {{"sql": "SELECT a.city AS city, COUNT(DISTINCT e.id) AS employee_count FROM address a JOIN employee e ON e.address_id = a.id GROUP BY a.city ORDER BY employee_count DESC LIMIT 1;", "charts": []}}
 
-User question:
-{question}
-"""
-)
+        User question:
+        {question}
+        """
+        )
     chain = template | model | StrOutputParser()
     try:
         result = chain.invoke({
@@ -386,6 +428,6 @@ User question:
             "schema": database_schema
         })
     except Exception as e:
-        return {"error": str(e)}
+        return {"error": "LLM model cannot be reached due to token limitation. Please provide a new token."}
     else:
         return _parse_sql_chart_json(result)

@@ -1,15 +1,3 @@
-# NEW FILE: smart chart selection for the Ask Database page.
-#
-# The LLM suggests chart types BEFORE it sees the data. This file checks each
-# suggestion against the real rows and drops the ones that don't fit. If none
-# of the LLM's suggestions survive, it picks charts itself using simple rules.
-#
-# Rules:
-#   - time column (date / year / month) + number  -> line (+ bar if few points)
-#   - category + number                           -> bar
-#   - category + number, 2-6 rows, all positive,
-#     not an average/percentage                   -> pie as well
-#   - 1 row / single value / no numbers           -> table only (no charts)
 
 import re
 from datetime import date, datetime
@@ -18,11 +6,10 @@ from decimal import Decimal
 VALID_TYPES = ("bar", "pie", "line")
 MAX_BARS = 30
 MAX_PIE_SLICES = 6
-# NEW: looser limits when the user names the chart type themselves
+
 MAX_BARS_REQUESTED = 50
 MAX_PIE_SLICES_REQUESTED = 12
 
-# NEW: words that mean the user asked for a specific chart
 _ASKED = {
     "pie": re.compile(r"\b(pie|donut|doughnut)\b", re.I),
     "bar": re.compile(r"\b(bar|bars|column\s*(chart|graph))\b", re.I),
@@ -56,7 +43,7 @@ def _is_time_col(rows, col):
         return True
     if all(isinstance(v, str) and _DATE_TEXT.match(v) for v in vals):
         return True
-    # numbers such as 2021, 2022 in a column called "year" / "hire_year"
+    
     if _TIME_NAME.search(col) and all(_is_num(v) for v in vals):
         return True
     return False
@@ -188,7 +175,6 @@ def select_charts(llm_charts, columns, rows, question=""):
             seen.add(ctype)
             chosen.append(checked)
 
-    # NEW: the chart(s) the user asked for open first
     chosen.sort(key=lambda c: asked.index(c["type"]) if c["type"] in asked else len(asked))
 
     return chosen[:3]

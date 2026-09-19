@@ -1,12 +1,3 @@
-"""Evaluation helper: compares a model-generated SQL query against a
-user-supplied "correct" SQL query, so we can measure how accurate the
-model's SQL generation actually is.
-
-Accuracy is based purely on running both queries against the real database
-and comparing what they return (order-independent, column-value based) -
-not on how similar the two SQL strings look. Two differently-written
-queries can still return identical data, and that's what actually matters.
-"""
 
 from collections import Counter
 
@@ -29,7 +20,7 @@ def _run(sql):
     if isinstance(result, dict) and "error" in result:
         return None, result["error"]
     if isinstance(result, dict) and "affected_rows" in result:
-        # Not a SELECT - nothing to compare row-by-row.
+        
         return [result], None
     return result or [], None
 

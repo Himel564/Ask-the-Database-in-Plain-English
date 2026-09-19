@@ -3,7 +3,7 @@ import ast
 from pathlib import Path
 from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import Response  # NEW: to send voice audio
+from fastapi.responses import Response  
 from pydantic import BaseModel
 import pandas as pd
 
@@ -11,10 +11,9 @@ import io
 from database.db_job import execute_query
 from backend.llm_model import generate_response, load_and_index_pdf, query_pdf_context,generate_pandas_query
 from backend.evaluation import evaluate_queries
-from backend.multilingual import transcribe_audio, reply_in_user_language, text_to_speech  # NEW: multilingual
-from backend.llm_model import generate_sql_with_chart  # NEW: smart charts
-from backend.chart_selector import select_charts  # NEW: smart charts
-
+from backend.multilingual import transcribe_audio, reply_in_user_language, text_to_speech 
+from backend.llm_model import generate_sql_with_chart  
+from backend.chart_selector import select_charts  
 app = FastAPI(title="QueryAI Backend")
 
 app.add_middleware(
@@ -25,7 +24,6 @@ app.add_middleware(
 )
 
 
-# FIX: friendly message when the question is not valid / has no meaning
 INVALID_SQL_MESSAGE = (
     "Sorry, I couldn't understand that as a question about your database. "
     "Please try again with a clear question, for example: "
@@ -82,7 +80,6 @@ def convert_to_sql(request: QuestionRequest):
     return {"sql": sql}
 
 
-# NEW: Ask Database page -> SQL + result rows + best chart(s) in one call
 @app.post("/ask_with_chart")
 def ask_with_chart(request: QuestionRequest):
     question = request.question.strip()
@@ -106,7 +103,7 @@ def ask_with_chart(request: QuestionRequest):
 
     rows = result if isinstance(result, list) else []
     columns = list(rows[0].keys()) if rows else []
-    charts = select_charts(out.get("charts"), columns, rows, question)  # NEW: question -> user's chart request first
+    charts = select_charts(out.get("charts"), columns, rows, question)  
     return {"sql": sql, "columns": columns, "rows": rows, "charts": charts}
 
 
@@ -157,7 +154,6 @@ async def read_excel_data(file: UploadFile = File(...)):
                 detail="Please upload an Excel file (.xlsx or .xls) or a CSV file (.csv)"
             )
 
-        # Read uploaded file
         contents = await file.read()
         if not contents:
             raise HTTPException(
@@ -165,25 +161,21 @@ async def read_excel_data(file: UploadFile = File(...)):
                 detail="The uploaded file is empty"
             )
 
-        # Select the parser based on the actual file extension. Excel files
-        # cannot be parsed by read_csv, which caused upload failures for .xlsx.
         if extension == ".csv":
             df = pd.read_csv(io.BytesIO(contents))
         else:
             df = pd.read_excel(io.BytesIO(contents), engine="openpyxl" if extension == ".xlsx" else "xlrd")
 
 
-        # Check if file contains data
         if df.empty:
             raise HTTPException(
                 status_code=400,
                 detail="The uploaded Excel file is empty"
             )
 
-        # Store dataframe
         app.state.df = df
 
-        # Get column names
+        
         column_name = df.columns.tolist()
 
         return {
@@ -210,7 +202,7 @@ class QueryRequest(BaseModel):
 @app.post("/ask_excel")
 async def process_query(request: PdfQuestionRequest):
 
-    # Check whether Excel file is uploaded
+    
     if app.state.df is None:
         raise HTTPException(
             status_code=400,
@@ -218,13 +210,11 @@ async def process_query(request: PdfQuestionRequest):
         )
 
     try:
-        # Get dataframe
+        
         df = app.state.df
 
-        # Get column names
         column_name = df.columns.tolist()
 
-        # Call your already-written function
         question = request.question.strip()
         if not question:
             raise HTTPException(status_code=400, detail="Question is empty.")
@@ -245,7 +235,7 @@ async def process_query(request: PdfQuestionRequest):
             "pandas_query": pandas_query
         }
 
-    except HTTPException:  # FIX: keep our own messages instead of turning them into a 500 error
+    except HTTPException:  
         raise
 
     except Exception as e:
@@ -326,15 +316,11 @@ def evaluate_sql(request: EvaluateRequest):
         raise HTTPException(status_code=500, detail=f"Could not evaluate the queries: {e}")
     return result
 
-# ---------------------------------------------------------------------------
-# NEW: Multilingual support (English, Bengali, Hindi)
-# ---------------------------------------------------------------------------
 class ReplyRequest(BaseModel):
     question: str
     information: str
 
 
-# Voice -> text. Whisper detects the spoken language by itself.
 @app.post("/transcribe_audio")
 async def transcribe_audio_file(file: UploadFile = File(...)):
     audio_bytes = await file.read()
@@ -348,7 +334,6 @@ async def transcribe_audio_file(file: UploadFile = File(...)):
     return {"text": text}
 
 
-# Writes the final answer in the same language as the question.
 @app.post("/reply_in_user_language")
 def reply_in_language(request: ReplyRequest):
     try:
@@ -359,10 +344,9 @@ def reply_in_language(request: ReplyRequest):
     return {"answer": answer}
 
 
-# NEW: clear Bengali / Hindi voice. Returns an MP3 file.
 class SpeakRequest(BaseModel):
     text: str
-    language: str  # "bn" or "hi"
+    language: str  
 
 
 @app.post("/speak_text")

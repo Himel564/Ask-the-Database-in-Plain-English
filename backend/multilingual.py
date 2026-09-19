@@ -126,16 +126,14 @@ def transcribe_audio(audio_bytes, file_name):
     """Convert recorded voice into text using Groq Whisper.
     Whisper automatically detects if the user spoke English, Bengali or Hindi."""
 
-    client = Groq()  # reads GROQ_API_KEY from the .env file automatically
+    client = Groq()  
 
     result = client.audio.transcriptions.create(
         file=(file_name, audio_bytes),
         model="whisper-large-v3",
-        response_format="verbose_json",  # verbose_json also tells us the detected language
+        response_format="verbose_json",  
     )
 
-    # Hindi and Urdu sound almost the same, so Whisper sometimes writes
-    # Hindi speech in Urdu letters. If that happens, we ask again for Hindi.
     if result.language and result.language.lower() in ("urdu", "ur"):
         result = client.audio.transcriptions.create(
             file=(file_name, audio_bytes),
@@ -151,8 +149,6 @@ def reply_in_user_language(question, information):
     """Write a short answer to the question, using the given information,
     in the same language as the question (English, Bengali or Hindi)."""
 
-    # Same model the project already uses (known to work with your Groq key).
-    # reasoning_effort="low" makes it think less, so the answer comes much faster.
     model = init_chat_model("groq:openai/gpt-oss-120b", reasoning_effort="low")
 
     template = PromptTemplate(
@@ -208,6 +204,6 @@ def text_to_speech(text, language):
     Returns the voice as MP3 audio bytes."""
 
     tts = gTTS(text=text, lang=language)
-    audio = io.BytesIO()     # a file kept in memory
-    tts.write_to_fp(audio)   # save the voice into it
+    audio = io.BytesIO()     
+    tts.write_to_fp(audio)   
     return audio.getvalue()
