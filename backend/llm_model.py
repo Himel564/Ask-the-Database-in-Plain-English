@@ -8,6 +8,8 @@ from langchain_community.document_loaders import PDFPlumberLoader
 import pdfplumber
 
 
+
+
 load_dotenv(r"backend\.env")
 
 _pdf_store = {"filename": None, "context": None, "pages": 0}

@@ -1,7 +1,3 @@
-// NEW FILE (UI update): download the answer as PDF or Excel.
-// Standalone module. It does not import or change any existing team code.
-// Libraries are loaded from cdnjs only when the user clicks a download button.
-// If the internet is not available, it falls back to "Print → Save as PDF" and CSV.
 
 const LIBS = {
   jspdf: "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js",

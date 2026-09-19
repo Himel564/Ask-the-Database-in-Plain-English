@@ -1,10 +1,4 @@
-// Backend settings. This replaces the old .env file.
-//
-// API_BASE_URL is picked automatically:
-//   - Served by Nginx in Docker (http://localhost or your AWS server): "/api"
-//     Nginx forwards /api/... to the backend container.
-//   - Served locally on another port (e.g. http://localhost:5173): "http://localhost:8000"
-// To force a value, set API_BASE_URL_OVERRIDE below.
+
 
 const API_BASE_URL_OVERRIDE = "/api";
 

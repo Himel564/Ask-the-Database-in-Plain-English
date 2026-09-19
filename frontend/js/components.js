@@ -7,10 +7,9 @@ import { renderSmartChart, markSuggestedViews } from "./smartChart.js"; // NEW: 
 
 let uid = 0;
 
-// ---------------------------------------------------------------------------
 // Ask card: question box, voice button, voice-to-voice button, examples,
 // submit button, error box
-// ---------------------------------------------------------------------------
+
 export function createAskCard({
   subtitle,
   placeholder,
@@ -86,9 +85,8 @@ export function createAskCard({
 
   textarea.placeholder = placeholder;
 
-  // -------------------------------------------------------------------------
   // Normal voice input: voice -> text
-  // -------------------------------------------------------------------------
+
   const voice = createVoiceInput({
     onText: (text) => {
       textarea.value = text;
@@ -125,10 +123,9 @@ export function createAskCard({
       : voice.start(textarea.value);
   });
 
-  // -------------------------------------------------------------------------
   // Voice-to-voice input
   // Voice -> Question -> Submit -> Answer -> Speech
-  // -------------------------------------------------------------------------
+  
   const waveVoice = createVoiceInput({
     onText: (text) => {
       textarea.value = text;
@@ -186,9 +183,9 @@ export function createAskCard({
     usedVoice = false;
   });
 
-  // -------------------------------------------------------------------------
+  
   // Submit
-  // -------------------------------------------------------------------------
+  
   submitBtn.addEventListener("click", () => {
     // FIX: pressing Send / Enter is a normal text question, so don't speak the answer
     usedVoice = false;
@@ -201,9 +198,9 @@ export function createAskCard({
     }
   });
 
-  // -------------------------------------------------------------------------
+  
   // Submit button
-  // -------------------------------------------------------------------------
+  
   function renderButton() {
     submitBtn.disabled = loading || disabled;
 
@@ -217,9 +214,8 @@ export function createAskCard({
       loading ? loadingLabel : buttonLabel;
   }
 
-  // -------------------------------------------------------------------------
   // Example questions
-  // -------------------------------------------------------------------------
+
   function setExamples(list) {
     tryBox.innerHTML = "";
 
@@ -248,9 +244,8 @@ export function createAskCard({
     });
   }
 
-  // -------------------------------------------------------------------------
   // Automatically speak the answer for voice-to-voice questions.
-  // -------------------------------------------------------------------------
+  
   function setSpeech(text) {
     if (!text) {
       stopSpeaking();
@@ -259,9 +254,8 @@ export function createAskCard({
     }
   }
 
-  // -------------------------------------------------------------------------
   // Error
-  // -------------------------------------------------------------------------
+  
   function setError(msg) {
     errorBox.textContent = msg || "";
     errorBox.hidden = !msg;
@@ -312,14 +306,13 @@ export function createAskCard({
 }
 
 
-// ---------------------------------------------------------------------------
 // Generated query panel + results panel
 // Supports:
 // - Table
 // - Normal chart
 // - Pie chart
 // - Optional hidden Run Query button
-// ---------------------------------------------------------------------------
+
 export function createQueryPanels({
   queryTitle = "Generated SQL",
   onRun,
@@ -453,9 +446,8 @@ export function createQueryPanels({
   let view = "table";
   let running = false;
 
-  // -------------------------------------------------------------------------
   // Run button
-  // -------------------------------------------------------------------------
+  
   function renderRunButton() {
     runBtn.disabled = running || !code.value.trim();
 
@@ -470,9 +462,8 @@ export function createQueryPanels({
     copyBtn.disabled = !code.value;
   }
 
-  // -------------------------------------------------------------------------
   // Table cell formatting
-  // -------------------------------------------------------------------------
+  
   function formatCell(td, value) {
     if (value === null || value === undefined) {
       td.append(el("span", "null", "null"));
@@ -483,9 +474,8 @@ export function createQueryPanels({
     }
   }
 
-  // -------------------------------------------------------------------------
   // Render results
-  // -------------------------------------------------------------------------
+
   function renderResults() {
     const rowCount = result?.rows?.length ?? 0;
 
@@ -524,9 +514,8 @@ export function createQueryPanels({
       return;
     }
 
-    // -----------------------------------------------------------------------
     // NEW: smart charts (only when smartCharts is on)
-    // -----------------------------------------------------------------------
+    
     if (smartCharts && view !== "table") {
       const type = view === "chart" ? "bar" : view;
       const spec = (result.charts || []).find((c) => c.type === type);
@@ -534,25 +523,22 @@ export function createQueryPanels({
       return;
     }
 
-    // -----------------------------------------------------------------------
     // Normal chart
-    // -----------------------------------------------------------------------
+    
     if (view === "chart") {
       renderChart(body, result);
       return;
     }
 
-    // -----------------------------------------------------------------------
     // Pie chart
-    // -----------------------------------------------------------------------
+   
     if (view === "pie") {
       renderPieChart(body, result);
       return;
     }
 
-    // -----------------------------------------------------------------------
     // Table
-    // -----------------------------------------------------------------------
+    
     const wrap = el("div", "table-wrap");
     const table = el("table");
 
@@ -591,21 +577,19 @@ export function createQueryPanels({
     body.append(wrap);
   }
 
-  // -------------------------------------------------------------------------
+  
   // Query textarea
-  // -------------------------------------------------------------------------
+
   code.addEventListener("input", renderRunButton);
 
-  // -------------------------------------------------------------------------
   // Run query
-  // -------------------------------------------------------------------------
+
   runBtn.addEventListener("click", () => {
     onRun(code.value);
   });
 
-  // -------------------------------------------------------------------------
   // Copy query
-  // -------------------------------------------------------------------------
+
   copyBtn.addEventListener("click", async () => {
     if (!code.value) return;
 
@@ -618,9 +602,8 @@ export function createQueryPanels({
     }
   });
 
-  // -------------------------------------------------------------------------
   // Table / chart / pie view switching
-  // -------------------------------------------------------------------------
+  
   viewButtons.forEach((btn) =>
     btn.addEventListener("click", () => {
       view = btn.dataset.view;
@@ -680,9 +663,8 @@ export function createQueryPanels({
 }
 
 
-// ---------------------------------------------------------------------------
 // File upload card
-// ---------------------------------------------------------------------------
+
 function formatSize(bytes) {
   if (bytes < 1024) {
     return `${bytes} B`;
@@ -734,10 +716,8 @@ export function createFileUpload({
     status: "idle",
     error: ""
   };
-
-  // -------------------------------------------------------------------------
   // State update
-  // -------------------------------------------------------------------------
+
   function update(patch) {
     Object.assign(state, patch);
 
@@ -749,9 +729,9 @@ export function createFileUpload({
     });
   }
 
-  // -------------------------------------------------------------------------
+  
   // Pick file
-  // -------------------------------------------------------------------------
+  
   function pick(file) {
     if (!file) return;
 
@@ -771,9 +751,9 @@ export function createFileUpload({
     });
   }
 
-  // -------------------------------------------------------------------------
+
   // Upload
-  // -------------------------------------------------------------------------
+ 
   async function upload() {
     if (!state.file) return;
 
@@ -797,9 +777,8 @@ export function createFileUpload({
     }
   }
 
-  // -------------------------------------------------------------------------
   // Drop zone
-  // -------------------------------------------------------------------------
+ 
   function renderDropzone() {
     const zone = html(`
       <div
@@ -868,9 +847,8 @@ export function createFileUpload({
     return zone;
   }
 
-  // -------------------------------------------------------------------------
   // File row
-  // -------------------------------------------------------------------------
+
   function renderFileRow() {
     const row = html(`
       <div class="file-row">
@@ -955,9 +933,9 @@ export function createFileUpload({
     return row;
   }
 
-  // -------------------------------------------------------------------------
+  
   // Render upload card
-  // -------------------------------------------------------------------------
+  
   function render() {
     bodyBox.innerHTML = "";
 
