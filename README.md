@@ -1,6 +1,5 @@
 # LinguaSQL
-
-> **Cognizant NPN Hackathon 2026 — Use Case 9**  
+  
 > **Live Demo:** [http://13.206.248.246](http://13.206.248.246)
 
 Ask your database anything in plain English or voice in your spoken language. LinguaSQL translates natural language queries into validated, secure SQL, executes them on PostgreSQL, and presents auto-generated charts, structured data tables, and natural language summaries.
