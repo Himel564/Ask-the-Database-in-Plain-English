@@ -123,7 +123,7 @@ def validate_response(question, schema, result_sql):
     to another model for validation.
     """
     validator_model = init_chat_model(
-        "groq:openai/gpt-oss-20b"   # or use a lighter model for validation
+        "groq:openai/gpt-oss-20b"   
     )
 
     validation_template = PromptTemplate(
@@ -164,6 +164,7 @@ def validate_response(question, schema, result_sql):
             "sql": result_sql
         })
     except Exception as e:
+        generate_response({"question":question+result_sql+"this was invalid, ensure correctness”"})
         return {"error": f"Validation failed: {str(e)}"}
     else:
         return validation_result
