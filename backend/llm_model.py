@@ -117,6 +117,58 @@ def query_pdf_context(question):
         return result
 
 
+def validate_response(question, schema, result_sql):
+    """
+    Pass the generated SQL, schema, and original question
+    to another model for validation.
+    """
+    validator_model = init_chat_model(
+        "groq:openai/gpt-oss-20b"   # or use a lighter model for validation
+    )
+
+    validation_template = PromptTemplate(
+        input_variables=["question", "schema", "sql"],
+        template="""
+        You are an expert SQL validator.
+
+        Task: Verify if the given SQL query correctly answers the user's question
+        based on the provided schema.
+
+        Database dialect: PostgreSQL
+
+        Schema:
+        {schema}
+
+        User question:
+        {question}
+
+        SQL to validate:
+        {sql}
+
+        Rules:
+        1. Check if all tables and columns exist in the schema.
+        2. Ensure the query logic matches the intent of the question.
+        3. Verify correct use of JOIN, GROUP BY, ORDER BY, aggregates, and subqueries.
+        4. Ensure ranking queries (highest, lowest, second highest, etc.) are logically correct.
+        5. If valid, return exactly: VALID
+        6. If invalid, return exactly: INVALID
+        7. Do not include explanations, markdown, or extra text.
+        """
+    )
+
+    chain = validation_template | validator_model | StrOutputParser()
+    try:
+        validation_result = chain.invoke({
+            "question": question,
+            "schema": schema,
+            "sql": result_sql
+        })
+    except Exception as e:
+        return {"error": f"Validation failed: {str(e)}"}
+    else:
+        return validation_result
+
+
 def generate_response(question):
 
     model = init_chat_model(
