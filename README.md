@@ -67,7 +67,7 @@ Run the entire application stack locally with a single command:
 
 ```bash
 # Clone repository
-git clone [https://github.com/student-Sudeshnapaul/Ask-the-Database-in-Plain-English.git](https://github.com/student-Sudeshnapaul/Ask-the-Database-in-Plain-English.git)
+git clone [https://github.com/Himel564/Ask-the-Database-in-Plain-English.git)
 cd Ask-the-Database-in-Plain-English
 
 # Start services
