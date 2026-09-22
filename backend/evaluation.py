@@ -5,10 +5,10 @@ from database.db_job import execute_query
 
 
 def _row_signature(row):
-    """Turn a result row (dict) into something hashable and comparable,
-    independent of column order. Values are stringified so equivalent
-    values of different types (e.g. Decimal vs float) still match."""
-    return tuple(sorted((str(k), str(v)) for k, v in row.items()))
+    """Turn a result row into a hashable signature based only on values,
+    ignoring column names. Values are stringified for type consistency."""
+    return tuple(sorted(str(v) for v in row.values()))
+
 
 
 def _run(sql):

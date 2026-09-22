@@ -329,6 +329,7 @@ def generate_pandas_query(question,column_names):
         or questions about columns that do not exist), return exactly:
         INVALID_QUESTION
         and nothing else.
+    20. if the question is not related to our data frame dont return any thing
 
     Examples:
 
