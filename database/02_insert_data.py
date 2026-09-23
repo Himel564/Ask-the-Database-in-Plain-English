@@ -22,7 +22,7 @@ departments = [
     (6, "Operations", "Chennai"),
 ]
 
-# (id, name, hire_date, manager_id, dept_id) - managers are inserted before their reports
+
 employees = [
     (1, "Arjun Mehta", "2015-03-10", None, 1),
     (2, "Priya Sharma", "2016-07-01", None, 2),
@@ -56,7 +56,6 @@ employees = [
     (28, "Tara Sen", "2020-01-20", 16, 6),
     (29, "Imran Qureshi", "2021-09-06", 16, 6),
     (30, "Bhavna Desai", "2023-08-21", 28, 6),
-    # Added for testing the manager hierarchy query (all report up to Arjun Mehta)
     (31, "Aarav Das", "2019-07-21", 6, 1),
     (32, "Riya Iyer", "2020-10-02", 6, 1),
     (33, "Kabir Sinha", "2020-02-08", 6, 1),
@@ -106,15 +105,14 @@ employees = [
 ]
 
 department_heads = [
-    (1, 1),   # Arjun Mehta -> Engineering
-    (2, 2),   # Priya Sharma -> Human Resources
-    (3, 3),   # Rahul Verma -> Finance
-    (4, 4),   # Sneha Iyer -> Sales
-    (5, 5),   # Vikram Singh -> Marketing
-    (16, 6),  # Deepak Menon -> Operations
-]  # (employee_id, dept_id)
+    (1, 1),   
+    (2, 2),   
+    (3, 3),   
+    (4, 4),   
+    (5, 5),   
+    (16, 6),  
+]  
 
-# (employee_id, amount, effective_from) - several employees have salary history
 salaries = [
     (1, 180000, "2015-03-10"), (1, 250000, "2020-04-01"), (1, 320000, "2023-04-01"),
     (2, 150000, "2016-07-01"), (2, 210000, "2022-04-01"),
@@ -132,7 +130,6 @@ salaries = [
     (14, 60000, "2022-01-10"),
     (15, 55000, "2023-07-17"),
 
-    # New employees
     (16, 130000, "2019-06-03"), (16, 175000, "2023-04-01"),
     (17, 78000, "2021-01-18"), (17, 105000, "2024-04-01"),
     (18, 68000, "2022-05-09"), (18, 82000, "2024-04-01"),
@@ -149,13 +146,11 @@ salaries = [
     (29, 70000, "2021-09-06"), (29, 88000, "2024-04-01"),
     (30, 52000, "2023-08-21"),
 
-    # 2025 raises for existing employees
     (1, 380000, "2025-04-01"),
     (9, 78000, "2025-04-01"),
     (12, 90000, "2025-04-01"),
     (14, 75000, "2025-04-01"),
     (15, 68000, "2025-04-01"),
-    # Added for testing the manager hierarchy query (all report up to Arjun Mehta)
     (31, 71000, "2019-07-21"), (31, 88000, "2024-04-01"),
     (32, 86000, "2020-10-02"), (32, 107000, "2024-04-01"),
     (33, 72000, "2020-02-08"), (33, 100000, "2024-04-01"),
@@ -221,10 +216,7 @@ addresses = [
     (14, "Noida", "Uttar Pradesh", "201301"),
     (15, "Mumbai", "Maharashtra", "400050"),
 
-    # Second address for employee 1
     (1, "Chennai", "Tamil Nadu", "600001"),
-
-    # New employees
     (16, "Chennai", "Tamil Nadu", "600028"),
     (17, "Bengaluru", "Karnataka", "560102"),
     (18, "Mysuru", "Karnataka", "570001"),
@@ -241,11 +233,10 @@ addresses = [
     (29, "Hyderabad", "Telangana", "500034"),
     (30, "Coimbatore", "Tamil Nadu", "641001"),
 
-    # Additional addresses
+
     (6, "Pune", "Maharashtra", "411057"),
     (13, "New Delhi", "Delhi", "110024"),
     (22, "Navi Mumbai", "Maharashtra", "400703"),
-    # Added for testing the manager hierarchy query (all report up to Arjun Mehta)
     (31, "Kochi", "Kerala", "682078"),
     (32, "Bengaluru", "Karnataka", "560021"),
     (33, "Bengaluru", "Karnataka", "560082"),
@@ -364,7 +355,7 @@ job_history = [
     (50, "Junior Engineer", "Software Engineer", "2023-04-01"),
 ]
 
-# (employee_id, dept_id, allocation_percent)
+
 dept_assignments = [
     (1, 1, 100),
     (2, 2, 100),
