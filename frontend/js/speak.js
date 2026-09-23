@@ -3,9 +3,7 @@ import { detectLanguage } from "./language.js"; //multilingual speech
 import { getSpeechAudio } from "./api.js"; // clear Bengali / Hindi voice
 
 let currentAudio = null; // NEW: the Bengali / Hindi audio that is playing now
-// NEW FILE: speak.js
-// This file reads text out loud using the browser's built-in voice (speechSynthesis).
-// It uses a female American voice. Works best in Chrome and Edge.
+
 
 // Find a female American voice from the browser's voice list
 function getFemaleVoice() {
@@ -107,8 +105,7 @@ export function isSpeaking() {
   return (window.speechSynthesis && window.speechSynthesis.speaking) || audioPlaying;
 }
 
-// Make a short sentence from a table result
-// Example: "I found 5 rows. The first result is: name John, salary 50000"
+
 export function makeResultSpeech(result) {
   if (!result || !result.rows || result.rows.length === 0) {
     return "I did not find any rows.";
