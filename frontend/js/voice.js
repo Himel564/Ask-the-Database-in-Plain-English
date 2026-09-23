@@ -43,12 +43,7 @@ export function createVoiceInput({ onText, onListeningChange, onError }) {
   return { start, stop };
 }
 
-// ---------------------------------------------------------------------------
-// NEW: Multilingual voice input (English, Bengali, Hindi)
-// Records the voice and sends it to the backend (Groq Whisper),
-// which detects the language by itself and returns the text.
-// It works the same way as createVoiceInput, so the rest of the app does not change.
-// ---------------------------------------------------------------------------
+
 export function createWhisperVoiceInput({ onText, onListeningChange, onError }) {
   let recorder = null;
   let audioChunks = [];
