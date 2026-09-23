@@ -1,6 +1,4 @@
-/* NEW FILE (UI update): chat-style look for LinguaSQL.
-   Loaded AFTER styles.css, so it only overrides how things look.
-   Everything is scoped under body.ls (added by js/ui.js). */
+
 
 body.ls {
   --bg: #eef1ee;
@@ -19,7 +17,7 @@ body.ls {
   color: var(--ink);
 }
 
-/* ---------- Shell ---------- */
+
 body.ls .app { gap: 14px; padding: 14px; height: 100vh; min-height: 0; }
 body.ls .sidebar {
   height: calc(100vh - 28px); top: 14px;
@@ -50,7 +48,7 @@ body.ls .topbar p { font-size: 14px; }
 body.ls .container { flex: 1; min-height: 0; max-width: none; padding: 0; gap: 0; }
 body.ls .features, body.ls .footer { display: none; }
 
-/* ---------- Page = top bar + thread + composer ---------- */
+
 body.ls .page-stack.ls-page { flex: 1; min-height: 0; gap: 0; background: var(--soft); }
 body.ls .ls-top:empty { display: none; }
 body.ls .ls-top { padding: 14px 32px 0; background: var(--panel); }
@@ -60,7 +58,7 @@ body.ls .ls-thread {
   scrollbar-width: thin;
 }
 
-/* Empty state */
+
 body.ls .ls-hero { margin: auto; text-align: center; max-width: 420px; color: var(--muted); }
 body.ls .ls-hero-icon {
   width: 56px; height: 56px; margin: 0 auto 14px; border-radius: 16px;
@@ -310,8 +308,7 @@ body.ls .ls-composer .error { border-radius: 12px; }
   body.ls .ls-meta-line { gap: 14px; }
 }
 
-/* ---------- Update 2 ---------- */
-/* Hide the "Backend connected" line (the team's status check still runs in the background) */
+
 body.ls .status { display: none; }
 
 /* New LinguaSQL logo in the top-left */
