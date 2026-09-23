@@ -11,9 +11,7 @@ import {
 import { speakText, stopSpeaking, isSpeaking, makeResultSpeech } from "./speak.js"; // NEW: for voice output
 import { getAnswerInUserLanguage } from "./language.js"; // NEW: multilingual answers
 
-// ---------------------------------------------------------------------------
-// SQL database
-// ---------------------------------------------------------------------------
+
 export function initDatabasePage(container) {
   const panels = createQueryPanels({
     hideRunButton: true, // NEW: no Run Query button, the answer comes directly
@@ -75,10 +73,7 @@ export function initDatabasePage(container) {
   container.append(ask.element, panels.element);
 }
 
-// ---------------------------------------------------------------------------
-// Evaluation: ask a question, see the model's generated SQL + its result,
-// then paste in the correct SQL to compare and see the model's accuracy.
-// ---------------------------------------------------------------------------
+
 function renderMiniTable(rows) {
   if (!Array.isArray(rows) || rows.length === 0) {
     return el("p", "eval-sub", "No rows returned.");
@@ -433,9 +428,7 @@ export function initPdfPage(container) {
   container.append(upload.element, ask.element, answersCard);
 }
 
-// ---------------------------------------------------------------------------
-// Excel
-// ---------------------------------------------------------------------------
+
 export function initExcelPage(container) {
   let uploadState = { ready: false };
 
