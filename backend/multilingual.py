@@ -1,16 +1,5 @@
 # multilingual.py
-# ---------------------------------------------------------------------------
-# NEW FILE: adds multilingual support (English, Bengali, Hindi) to the project.
-#
-# It has 2 functions:
-#   1. transcribe_audio()       -> turns the user's voice into text.
-#                                  Groq Whisper detects the spoken language by itself.
-#   2. reply_in_user_language() -> writes the final answer in the SAME language
-#                                  the user asked the question in.
-#   3. text_to_speech()         -> makes a clear Bengali / Hindi voice (Google TTS).
-#
-# It uses the same GROQ_API_KEY that the project already uses.
-# ---------------------------------------------------------------------------
+
 
 import io
 from groq import Groq
@@ -32,8 +21,7 @@ def transcribe_audio(audio_bytes, file_name):
         response_format="verbose_json",  # verbose_json also tells us the detected language
     )
 
-    # Hindi and Urdu sound almost the same, so Whisper sometimes writes
-    # Hindi speech in Urdu letters. If that happens, we ask again for Hindi.
+
     if result.language and result.language.lower() in ("urdu", "ur"):
         result = client.audio.transcriptions.create(
             file=(file_name, audio_bytes),
@@ -101,18 +89,7 @@ def text_to_speech(text, language):
     audio = io.BytesIO()     # a file kept in memory
     tts.write_to_fp(audio)   # save the voice into it
     return audio.getvalue()# multilingual.py
-# ---------------------------------------------------------------------------
-# NEW FILE: adds multilingual support (English, Bengali, Hindi) to the project.
-#
-# It has 2 functions:
-#   1. transcribe_audio()       -> turns the user's voice into text.
-#                                  Groq Whisper detects the spoken language by itself.
-#   2. reply_in_user_language() -> writes the final answer in the SAME language
-#                                  the user asked the question in.
-#   3. text_to_speech()         -> makes a clear Bengali / Hindi voice (Google TTS).
-#
-# It uses the same GROQ_API_KEY that the project already uses.
-# ---------------------------------------------------------------------------
+
 
 import io
 from groq import Groq
