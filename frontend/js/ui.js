@@ -1,21 +1,11 @@
-// NEW FILE (UI update): chat-style layout for LinguaSQL.
-//
-// IMPORTANT: this file does NOT change any logic written by the team.
-// app.js / pages.js / components.js build the pages exactly like before.
-// This file only runs AFTER them and:
-//   - moves the existing elements into a chat-style layout (moving an element
-//     keeps all of its click / voice / upload listeners working),
-//   - adds visual extras (question bubble, View SQL / View Results tabs,
-//     syntax-highlighted SQL, info line, Download PDF / Excel buttons).
+
 
 import { downloadPdf, downloadExcel } from "./export.js";
 
 // Shown in the info line under the results. Change it if your database name changes.
 const DATABASE_LABEL = "cxyz_comp";
 
-// ---------------------------------------------------------------------------
-// Small helpers
-// ---------------------------------------------------------------------------
+
 const SVG = {
   user: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/></svg>',
   bot: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="8" width="16" height="12" rx="3"/><path d="M12 4v4M9 13h.01M15 13h.01"/></svg>',
@@ -48,8 +38,7 @@ function escapeHtml(s) {
   return String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 }
 
-// Watch a textarea's .value (it is set by code, which fires no event).
-// This only adds a notification; the value still works exactly the same.
+
 function watchValue(textarea, cb) {
   const desc = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value");
   Object.defineProperty(textarea, "value", {
@@ -114,9 +103,7 @@ function downloadButtons(getData) {
   return box;
 }
 
-// ---------------------------------------------------------------------------
-// Composer: turns the existing "Ask a question" card into the bottom input bar
-// ---------------------------------------------------------------------------
+
 function buildComposer(page, ask, { syncPlaceholder }) {
   const textarea = ask.querySelector("textarea");
   const wrap = ask.querySelector(".input-wrap");
@@ -178,9 +165,7 @@ function onLoading(submit, cb) {
   new MutationObserver(check).observe(submit, { childList: true, subtree: true });
 }
 
-// ---------------------------------------------------------------------------
-// Result card: View SQL / View Results tabs around the existing panels
-// ---------------------------------------------------------------------------
+
 function buildResultCard(grid, { sourceLabel, getQuestion, getTiming }) {
   const [sqlSec, resSec] = grid.querySelectorAll(":scope > section");
   const code = sqlSec.querySelector(".code");
@@ -335,9 +320,7 @@ function buildResultCard(grid, { sourceLabel, getQuestion, getTiming }) {
   return { card, answerOut, show, updateMeta, polishCharts };
 }
 
-// ---------------------------------------------------------------------------
-// Chat turn (question bubble + bot bubble)
-// ---------------------------------------------------------------------------
+
 function buildTurn() {
   const turn = make("div", "ls-turn");
   const userRow = make("div", "ls-row ls-row-user");
@@ -359,9 +342,7 @@ function buildTurn() {
 
 const TYPING = '<span class="ls-typing"><i></i><i></i><i></i></span>';
 
-// ---------------------------------------------------------------------------
-// Pages
-// ---------------------------------------------------------------------------
+
 function setupQueryPage(page, { upload = null, syncPlaceholder = false, extras = [] } = {}) {
   const ask = page.querySelector(":scope > .card.ask");
   const grid = page.querySelector(":scope > .grid");
@@ -541,9 +522,7 @@ function setupEvaluationPage(page) {
   setupQueryPage(page, { extras: evalGrid ? [evalGrid] : [] });
 }
 
-// ---------------------------------------------------------------------------
-// Start
-// ---------------------------------------------------------------------------
+
 document.body.classList.add("ls");
 setupQueryPage(document.getElementById("page-sql"));
 setupPdfPage(document.getElementById("page-pdf"));
