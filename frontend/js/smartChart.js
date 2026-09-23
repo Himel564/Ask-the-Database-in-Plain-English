@@ -1,6 +1,4 @@
-// NEW FILE: smart charts for the Ask Database page only.
-// Draws bar / pie / line charts as SVG using the columns the backend chose.
-// The Excel / PDF / Evaluation pages keep using chart.js exactly as before.
+
 
 import { el } from "./utils.js";
 
@@ -96,9 +94,7 @@ function injectStyles() {
   document.head.append(style);
 }
 
-// ---------------------------------------------------------------------------
-// Bar chart (vertical)
-// ---------------------------------------------------------------------------
+
 function drawBar(data, yName) {
   const n = data.length;
   const slot = Math.max(38, Math.min(80, 640 / n));
@@ -164,9 +160,7 @@ function drawPie(data) {
   return `<div class="sc-pie"><svg width="240" height="240" viewBox="0 0 240 240" role="img" aria-label="Pie chart">${paths}${center}</svg><ul class="sc-legend">${legend}</ul></div>`;
 }
 
-// ---------------------------------------------------------------------------
-// Line chart
-// ---------------------------------------------------------------------------
+
 function drawLine(data, yName) {
   const n = data.length;
   const padL = 48, padR = 20, padT = 22, padB = n > 8 ? 64 : 36;
@@ -206,10 +200,7 @@ function drawLine(data, yName) {
   return `<div class="sc-scroll"><svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Line chart of ${esc(yName)}">${g}</svg></div>`;
 }
 
-// ---------------------------------------------------------------------------
-// Main entry
-// type: "bar" | "pie" | "line"; spec: { x, y, reason } from the backend (optional)
-// ---------------------------------------------------------------------------
+
 export function renderSmartChart(container, result, type, spec) {
   injectStyles();
   container.innerHTML = "";
